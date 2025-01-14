@@ -29,7 +29,7 @@ interface PlayerState {
 }
 
 const getPlayerState = async (playerId: string): Promise<PlayerState> => {
-  const state = await redis.get<string>(`player:${playerId}`);
+  const state = await redis.get<PlayerState>(`player:${playerId}`);
   if (!state) {
     return {
       resources: 100, // Starting resources
@@ -38,7 +38,7 @@ const getPlayerState = async (playerId: string): Promise<PlayerState> => {
       alliances: [],
     };
   }
-  return JSON.parse(state);
+  return state;
 };
 
 const savePlayerState = async (playerId: string, state: PlayerState) => {
@@ -170,3 +170,7 @@ const twilioWebhook = async (req: NextApiRequest, res: NextApiResponse) => {
 };
 
 export default twilioWebhook;
+
+/*
+curl -X POST http://localhost:3000/api/twilio -d "Body=join" -d "From=whatsapp:+1234567890"
+*/
