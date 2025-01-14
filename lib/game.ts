@@ -1,4 +1,5 @@
 import { Redis } from "@upstash/redis";
+import Fuse from "fuse.js";
 
 const redis = Redis.fromEnv();
 
@@ -94,16 +95,34 @@ export const formatMessage = (message: string): string => {
     .replace(/```(.*?)```/g, "```$1```"); // Code block
 };
 
-// Helper function to find a player by name
+// Enhanced findPlayerByName with fuzzy matching
 export const findPlayerByName = async (
   name: string
 ): Promise<PlayerState | null> => {
   const players = await getAllPlayers();
-  return (
-    players.find(
-      (p) => p.registered && p.name.toLowerCase() === name.toLowerCase()
-    ) || null
-  );
+  const registeredPlayers = players.filter((p) => p.registered);
+
+  // Configure Fuse for player name matching
+  const fuse = new Fuse(registeredPlayers, {
+    keys: ["name"],
+    threshold: 0.3,
+    distance: 3,
+  });
+
+  const results = fuse.search(name);
+  return results.length > 0 ? results[0].item : null;
+};
+
+// Helper function to match commands with fuzzy search
+const matchCommand = (input: string): string | null => {
+  const commandList = Object.values(COMMANDS);
+  const fuse = new Fuse(commandList, {
+    threshold: 0.3,
+    distance: 3,
+  });
+
+  const results = fuse.search(input);
+  return results.length > 0 ? results[0].item : null;
 };
 
 // Helper function to check admin status
@@ -119,9 +138,17 @@ export const handleGameCommand = async (
   const state = await getPlayerState(playerId);
   const now = Math.floor(Date.now() / 1000);
 
+  // Match the command using fuzzy search
+  const matchedCommand = matchCommand(command.toLowerCase());
+  if (!matchedCommand) {
+    return formatMessage(
+      "Unknown command. Type 'help' for available commands."
+    );
+  }
+
   // Admin commands
   if (isAdmin(state)) {
-    switch (command.toLowerCase()) {
+    switch (matchedCommand) {
       case COMMANDS.DELETE_PLAYER:
         if (args.length === 0)
           return formatMessage("Please specify a player name!");
@@ -157,7 +184,7 @@ export const handleGameCommand = async (
   }
 
   // Regular game commands
-  switch (command.toLowerCase()) {
+  switch (matchedCommand) {
     case COMMANDS.REGISTER:
       if (state.registered) return formatMessage("You are already registered!");
       if (args.length === 0) return formatMessage("Please provide your name!");
@@ -207,29 +234,27 @@ export const handleGameCommand = async (
         );
       }
 
-      const targetName = args.join(" "); // Allow names with spaces
+      const targetName = args.join(" ");
       const targetPlayer = await findPlayerByName(targetName);
 
       if (!targetPlayer) {
         return formatMessage("Could not find a player with that name!");
       }
 
-      const targetState = targetPlayer;
-
-      if (targetState.id === playerId) {
+      if (targetPlayer.id === playerId) {
         return formatMessage("You cannot attack yourself!");
       }
 
-      const damage = calculateDamage(state, targetState);
-      targetState.resources = Math.max(0, targetState.resources - damage);
+      const damage = calculateDamage(state, targetPlayer);
+      targetPlayer.resources = Math.max(0, targetPlayer.resources - damage);
       state.lastAttack = now;
 
-      await savePlayerState(targetState.id, targetState);
+      await savePlayerState(targetPlayer.id, targetPlayer);
       await savePlayerState(playerId, state);
       return formatMessage(
         `⚔️ *Attack Results:*\n` +
           `• Damage dealt: ${damage}\n` +
-          `• ${targetState.name}'s resources: ${targetState.resources}`
+          `• ${targetPlayer.name}'s resources: ${targetPlayer.resources}`
       );
 
     case COMMANDS.COLLECT:
@@ -281,28 +306,24 @@ export const handleGameCommand = async (
           "Please specify a player name to propose an alliance!"
         );
 
-      const allianceName = args.join(" "); // Allow names with spaces
-      const alliancePlayer = await findPlayerByName(allianceName);
-
+      const alliancePlayer = await findPlayerByName(args.join(" "));
       if (!alliancePlayer) {
         return formatMessage("Could not find a player with that name!");
       }
 
-      const allianceState = alliancePlayer;
-
-      if (allianceState.id === playerId) {
+      if (alliancePlayer.id === playerId) {
         return formatMessage("You cannot propose an alliance with yourself!");
       }
 
-      if (state.alliances.includes(allianceState.id)) {
+      if (state.alliances.includes(alliancePlayer.id)) {
         return formatMessage("You are already allied with this player!");
       }
 
-      state.alliances.push(allianceState.id);
+      state.alliances.push(alliancePlayer.id);
       await savePlayerState(playerId, state);
       return formatMessage(
         `🤝 *Alliance Proposal:*\n` +
-          `• You have proposed an alliance with ${allianceState.name}!`
+          `• You have proposed an alliance with ${alliancePlayer.name}!`
       );
 
     case COMMANDS.HELP:
