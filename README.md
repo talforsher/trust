@@ -1,40 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+### **One-Pager: Alliance Wars**
 
-## Getting Started
+---
 
-First, run the development server:
+#### **Product Name:**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+**Alliance Wars**  
+A groundbreaking strategy game managed entirely through WhatsApp.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+#### **Tagline:**
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+_“Forge alliances. Fight battles. Dominate the game—all from your phone.”_
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+#### **What is Alliance Wars?**
 
-## Learn More
+Alliance Wars is a unique strategy game where players compete to become the strongest by building alliances, managing resources, and waging battles—all through simple WhatsApp messages. No downloads, no complex interfaces—just strategy and communication.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+#### **How It Works:**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Game Setup:**
 
-## Deploy on Vercel
+   - Players join a game by sending a message to a dedicated WhatsApp number.
+   - Each game is identified by a unique code.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **Gameplay:**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+   - Players perform actions like attacking, defending, collecting resources, or forming alliances by sending simple text commands.
+   - Actions are processed automatically, and players receive real-time updates.
+
+3. **Strategic Elements:**
+   - **Alliance Forging:** Both players must send an alliance request independently to form a pact, creating an element of trust and strategy.
+   - **Timed Moves:** Actions like attacking and collecting resources are limited by cooldown periods, ensuring fairness.
+   - **Comeback Mechanics:** Weak players receive resource boosts, keeping the game competitive.
+
+---
+
+#### **Why Invest in Alliance Wars?**
+
+1. **Accessibility:**
+
+   - Uses WhatsApp, a platform with over 2 billion active users worldwide.
+   - No downloads or app installations required—just a phone and WhatsApp.
+
+2. **Innovation:**
+
+   - Combines social interaction with strategic gameplay in a familiar messaging format.
+
+3. **Scalability:**
+
+   - Designed for global adoption, with minimal technical barriers for entry.
+
+4. **Engagement:**
+   - Encourages real-world interaction and trust-building among players.
+
+---
+
+#### **Target Audience:**
+
+Casual and strategy gamers aged 15–35 looking for fun, accessible, and social gaming experiences.
+
+---
+
+#### **Monetization Opportunities:**
+
+1. **In-game purchases:**
+   - Players can buy boosts, exclusive resources, or premium game modes.
+2. **Sponsored games:**
+   - Brands can sponsor themed games for exposure.
+3. **Subscription model:**
+   - Offer premium memberships for unique features and customization.
+
+---
+
+#### **Development Requirements:**
+
+1. **WhatsApp API Integration:** To process incoming and outgoing player commands.
+2. **Backend Infrastructure:**
+   - **Node.js** for game logic.
+   - **Redis** for real-time game state management.
+3. **Game Design and Content:** Create scenarios, rules, and comeback mechanics.
+
+---
+
+#### **Call to Action:**
+
+**Join us in revolutionizing casual gaming!**  
+We’re looking for investors to bring Alliance Wars to millions of players worldwide. Let’s make gaming simple, fun, and social.
+
+---
+
+Let me know if you'd like adjustments!
