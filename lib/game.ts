@@ -207,6 +207,17 @@ export const handleGameCommand = async (
           }`
       );
 
+    case COMMANDS.HELP:
+      return formatMessage(
+        "*Available Commands:*\n" +
+          "• *register <name>*: Set your player name\n" +
+          "• *attack <player>*: Attack another player\n" +
+          "• *collect*: Gather resources\n" +
+          "• *alliance <player>*: Propose alliance\n" +
+          "• *status*: Check your status\n" +
+          "• *players*: List all players"
+      );
+
     default:
       return formatMessage(
         "Unknown command. Send 'help' for available commands."
