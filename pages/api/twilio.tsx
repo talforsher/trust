@@ -125,10 +125,10 @@ const handleGameCommand = async (
 
 const twilioWebhook = async (req: NextApiRequest, res: NextApiResponse) => {
   // Validate that the request is coming from Twilio
-  const twilioSignature = req.headers["x-twilio-signature"];
+  //   const twilioSignature = req.headers["x-twilio-signature"];
   const authToken = process.env.TWILIO_AUTH_TOKEN;
 
-  if (!twilioSignature || !authToken) {
+  if (!authToken) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
@@ -137,17 +137,17 @@ const twilioWebhook = async (req: NextApiRequest, res: NextApiResponse) => {
     ? `https://${process.env.VERCEL_URL}/api/twilio`
     : `${req.headers["x-forwarded-proto"]}://${req.headers.host}/api/twilio`;
 
-  const isValidRequest = twilio.validateRequest(
-    authToken,
-    twilioSignature as string,
-    url,
-    req.body
-  );
+  //   const isValidRequest = twilio.validateRequest(
+  //     authToken,
+  //     twilioSignature as string,
+  //     url,
+  //     req.body
+  //   );
 
-  if (!isValidRequest) {
-    res.status(401).json({ error: "Invalid signature" });
-    return;
-  }
+  //   if (!isValidRequest) {
+  //     res.status(401).json({ error: "Invalid signature" });
+  //     return;
+  //   }
 
   // Get the incoming message and sender
   const incomingMsg = req.body.Body;
