@@ -12,6 +12,10 @@ export const COMMANDS = {
   HELP: "help",
   REGISTER: "register",
   LIST_PLAYERS: "players",
+  // Admin commands
+  DELETE_PLAYER: "delete",
+  GIVE_RESOURCES: "give",
+  SET_LEVEL: "setlevel",
 } as const;
 
 // Cooldown times (in seconds)
@@ -29,6 +33,7 @@ export interface PlayerState {
   alliances: string[];
   level: number;
   registered: boolean;
+  isAdmin?: boolean;
 }
 
 export const getPlayerState = async (
@@ -101,6 +106,11 @@ export const findPlayerByName = async (
   );
 };
 
+// Helper function to check admin status
+const isAdmin = (state: PlayerState): boolean => {
+  return !!state.isAdmin;
+};
+
 export const handleGameCommand = async (
   playerId: string,
   command: string,
@@ -109,6 +119,44 @@ export const handleGameCommand = async (
   const state = await getPlayerState(playerId);
   const now = Math.floor(Date.now() / 1000);
 
+  // Admin commands
+  if (isAdmin(state)) {
+    switch (command.toLowerCase()) {
+      case COMMANDS.DELETE_PLAYER:
+        if (args.length === 0)
+          return formatMessage("Please specify a player name!");
+        const playerToDelete = await findPlayerByName(args.join(" "));
+        if (!playerToDelete) return formatMessage("Player not found!");
+        await redis.del(`player:${playerToDelete.id}`);
+        return formatMessage(`Player ${playerToDelete.name} has been deleted!`);
+
+      case COMMANDS.GIVE_RESOURCES:
+        if (args.length < 2)
+          return formatMessage("Usage: give <player> <amount>");
+        const targetPlayer = await findPlayerByName(args[0]);
+        if (!targetPlayer) return formatMessage("Player not found!");
+        const amount = parseInt(args[1]);
+        if (isNaN(amount)) return formatMessage("Invalid amount!");
+        targetPlayer.resources += amount;
+        await savePlayerState(targetPlayer.id, targetPlayer);
+        return formatMessage(
+          `Gave ${amount} resources to ${targetPlayer.name}`
+        );
+
+      case COMMANDS.SET_LEVEL:
+        if (args.length < 2)
+          return formatMessage("Usage: setlevel <player> <level>");
+        const levelTarget = await findPlayerByName(args[0]);
+        if (!levelTarget) return formatMessage("Player not found!");
+        const level = parseInt(args[1]);
+        if (isNaN(level) || level < 1) return formatMessage("Invalid level!");
+        levelTarget.level = level;
+        await savePlayerState(levelTarget.id, levelTarget);
+        return formatMessage(`Set ${levelTarget.name}'s level to ${level}`);
+    }
+  }
+
+  // Regular game commands
   switch (command.toLowerCase()) {
     case COMMANDS.REGISTER:
       if (state.registered) return formatMessage("You are already registered!");
@@ -258,19 +306,28 @@ export const handleGameCommand = async (
       );
 
     case COMMANDS.HELP:
-      return formatMessage(
+      let helpMessage =
         "*Available Commands:*\n" +
-          "• *register <name>*: Set your player name\n" +
-          "• *attack <player>*: Attack another player\n" +
-          "• *collect*: Gather resources\n" +
-          "• *alliance <player>*: Propose alliance\n" +
-          "• *status*: Check your status\n" +
-          "• *players*: List all players"
-      );
+        "• *register <name>*: Set your player name\n" +
+        "• *attack <player>*: Attack another player\n" +
+        "• *collect*: Gather resources\n" +
+        "• *alliance <player>*: Propose alliance\n" +
+        "• *status*: Check your status\n" +
+        "• *players*: List all players";
+
+      if (isAdmin(state)) {
+        helpMessage +=
+          "\n\n*Admin Commands:*\n" +
+          "• *delete <player>*: Delete a player\n" +
+          "• *give <player> <amount>*: Give resources to a player\n" +
+          "• *setlevel <player> <level>*: Set a player's level";
+      }
+
+      return formatMessage(helpMessage);
 
     default:
       return formatMessage(
-        "Unknown command. Send 'help' for available commands."
+        "Unknown command. Type 'help' for available commands."
       );
   }
 };
