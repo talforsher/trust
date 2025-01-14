@@ -226,6 +226,37 @@ export const handleGameCommand = async (
           }`
       );
 
+    case COMMANDS.ALLIANCE:
+      if (!state.registered) return formatMessage("Please register first!");
+      if (args.length === 0)
+        return formatMessage(
+          "Please specify a player name to propose an alliance!"
+        );
+
+      const allianceName = args.join(" "); // Allow names with spaces
+      const alliancePlayer = await findPlayerByName(allianceName);
+
+      if (!alliancePlayer) {
+        return formatMessage("Could not find a player with that name!");
+      }
+
+      const allianceState = alliancePlayer;
+
+      if (allianceState.id === playerId) {
+        return formatMessage("You cannot propose an alliance with yourself!");
+      }
+
+      if (state.alliances.includes(allianceState.id)) {
+        return formatMessage("You are already allied with this player!");
+      }
+
+      state.alliances.push(allianceState.id);
+      await savePlayerState(playerId, state);
+      return formatMessage(
+        `🤝 *Alliance Proposal:*\n` +
+          `• You have proposed an alliance with ${allianceState.name}!`
+      );
+
     case COMMANDS.HELP:
       return formatMessage(
         "*Available Commands:*\n" +
