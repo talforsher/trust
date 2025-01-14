@@ -89,6 +89,18 @@ export const formatMessage = (message: string): string => {
     .replace(/```(.*?)```/g, "```$1```"); // Code block
 };
 
+// Helper function to find a player by name
+export const findPlayerByName = async (
+  name: string
+): Promise<PlayerState | null> => {
+  const players = await getAllPlayers();
+  return (
+    players.find(
+      (p) => p.registered && p.name.toLowerCase() === name.toLowerCase()
+    ) || null
+  );
+};
+
 export const handleGameCommand = async (
   playerId: string,
   command: string,
@@ -138,7 +150,7 @@ export const handleGameCommand = async (
     case COMMANDS.ATTACK:
       if (!state.registered) return formatMessage("Please register first!");
       if (args.length === 0)
-        return formatMessage("Please specify a player to attack!");
+        return formatMessage("Please specify a player name to attack!");
       if (now - state.lastAttack < COOLDOWNS.ATTACK) {
         return formatMessage(
           `⏳ Cooldown: ${
@@ -147,17 +159,24 @@ export const handleGameCommand = async (
         );
       }
 
-      const targetId = args[0];
-      const targetState = await getPlayerState(targetId);
+      const targetName = args.join(" "); // Allow names with spaces
+      const targetPlayer = await findPlayerByName(targetName);
 
-      if (!targetState.registered)
-        return formatMessage("That player hasn't registered yet!");
+      if (!targetPlayer) {
+        return formatMessage("Could not find a player with that name!");
+      }
+
+      const targetState = targetPlayer;
+
+      if (targetState.id === playerId) {
+        return formatMessage("You cannot attack yourself!");
+      }
 
       const damage = calculateDamage(state, targetState);
       targetState.resources = Math.max(0, targetState.resources - damage);
       state.lastAttack = now;
 
-      await savePlayerState(targetId, targetState);
+      await savePlayerState(targetState.id, targetState);
       await savePlayerState(playerId, state);
       return formatMessage(
         `⚔️ *Attack Results:*\n` +
