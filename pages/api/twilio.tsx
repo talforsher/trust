@@ -28,7 +28,13 @@ const twilioWebhook = async (req: NextApiRequest, res: NextApiResponse) => {
   // Handle the game command
   const response = await handleGameCommand(from, command, args);
 
-  // Send response back through Twilio
+  // If request is from web client, return JSON
+  if (from === "web-client") {
+    res.status(200).json({ message: response });
+    return;
+  }
+
+  // Otherwise, send response back through Twilio for WhatsApp
   const twiml = new twilio.twiml.MessagingResponse();
   twiml.message(response);
 

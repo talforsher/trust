@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Redis } from "@upstash/redis";
 import { PlayerState, COMMANDS } from "../lib/game";
 import Fuse from "fuse.js";
@@ -56,9 +56,17 @@ export default function Home({
       setCommand("");
 
       // Refresh game state
-      const stateResponse = await fetch("/api/status");
-      const newState = await stateResponse.json();
-      setGameState(newState);
+      try {
+        const stateResponse = await fetch("/api/status");
+        if (!stateResponse.ok) {
+          console.error("Status response not OK:", await stateResponse.text());
+          return;
+        }
+        const newState = await stateResponse.json();
+        setGameState(newState);
+      } catch (error) {
+        console.error("Error fetching game state:", error);
+      }
     } catch (error) {
       setMessages((prev) => [...prev, "Error processing command"]);
     }
