@@ -423,6 +423,11 @@ export const handleGameCommand = async (
         );
       }
 
+      // Ensure players object exists
+      if (!gameData.players) {
+        gameData.players = {};
+      }
+
       const gamePlayers = Object.values(gameData.players);
       if (gamePlayers.length >= gameData.config.maxPlayers)
         return formatMessage("Game is full!");
