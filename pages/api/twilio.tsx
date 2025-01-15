@@ -50,10 +50,10 @@ export default async function handler(
 
   try {
     // Validate Twilio request
-    if (!validateTwilioRequest(req)) {
-      console.error("Invalid Twilio signature");
-      return res.status(401).end("Unauthorized");
-    }
+    // if (!validateTwilioRequest(req)) {
+    //   console.error("Invalid Twilio signature");
+    //   return res.status(401).end("Unauthorized");
+    // }
 
     const incomingMsg = req.body.Body?.trim();
     const from = req.body.From;
