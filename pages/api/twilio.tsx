@@ -31,9 +31,6 @@ const validateTwilioRequest = (req: NextApiRequest): boolean => {
 const formatTwilioResponse = (message: string) => {
   const twiml = new twilio.twiml.MessagingResponse();
   twiml.message(message);
-  twiml.media(
-    "https://res.cloudinary.com/efsi/image/upload/v1736759380/maccabi-shoham/hog6iwxfznfrcpndaj3p.jpg"
-  );
   return twiml.toString();
 };
 
