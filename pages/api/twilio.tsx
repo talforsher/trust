@@ -1,48 +1,93 @@
 // twilio webhook
 import twilio from "twilio";
 import { NextApiRequest, NextApiResponse } from "next";
-import { handleGameCommand } from "../../lib/game";
+import { handleGameCommand, GameError } from "../../lib/game";
 
-const twilioWebhook = async (req: NextApiRequest, res: NextApiResponse) => {
-  // Validate that the request is coming from Twilio
+/**
+ * Validates that the request is coming from Twilio
+ */
+const validateTwilioRequest = (req: NextApiRequest): boolean => {
   const authToken = process.env.TWILIO_AUTH_TOKEN;
+  if (!authToken) return false;
 
-  if (!authToken) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
+  const twilioSignature = req.headers["x-twilio-signature"];
+  if (!twilioSignature) return false;
 
   const url = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}/api/twilio`
     : `${req.headers["x-forwarded-proto"]}://${req.headers.host}/api/twilio`;
 
-  // Get the incoming message and sender
-  const incomingMsg = req.body.Body;
-  const from = req.body.From; // This will be the WhatsApp number
-
-  console.log("Received message:", incomingMsg, "from:", from);
-
-  // Parse command and arguments
-  const [command, ...args] = incomingMsg.trim().split(" ");
-
-  // Handle the game command
-  const response = await handleGameCommand(from, command, args);
-
-  // If request is from web client, return JSON
-  if (from === "web-client") {
-    res.status(200).json({ message: response });
-    return;
-  }
-
-  // Otherwise, send response back through Twilio for WhatsApp
-  const twiml = new twilio.twiml.MessagingResponse();
-  twiml.message(response);
-
-  res.writeHead(200, { "Content-Type": "text/xml" });
-  res.end(twiml.toString());
+  return twilio.validateRequest(
+    authToken,
+    twilioSignature as string,
+    url,
+    req.body
+  );
 };
 
-export default twilioWebhook;
+/**
+ * Formats the response for Twilio
+ */
+const formatTwilioResponse = (message: string) => {
+  const twiml = new twilio.twiml.MessagingResponse();
+  twiml.message(message);
+  return twiml.toString();
+};
+
+/**
+ * Twilio webhook handler
+ * @description Handles incoming WhatsApp messages through Twilio
+ */
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  // Only allow POST requests
+  if (req.method !== "POST") {
+    res.setHeader("Allow", ["POST"]);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
+
+  try {
+    // Validate Twilio request
+    if (!validateTwilioRequest(req)) {
+      console.error("Invalid Twilio signature");
+      return res.status(401).end("Unauthorized");
+    }
+
+    const incomingMsg = req.body.Body?.trim();
+    const from = req.body.From;
+
+    // Validate required fields
+    if (!incomingMsg || !from) {
+      console.error("Missing required fields:", { incomingMsg, from });
+      return res.status(400).end("Missing required fields");
+    }
+
+    console.log("Received message:", incomingMsg, "from:", from);
+
+    // Parse command and arguments
+    const [command, ...args] = incomingMsg.split(" ");
+
+    // Handle the game command
+    const response = await handleGameCommand(from, command, args);
+
+    // Send response
+    res.setHeader("Content-Type", "text/xml");
+    return res.status(200).send(formatTwilioResponse(response));
+  } catch (error) {
+    console.error("Error processing webhook:", error);
+
+    if (error instanceof GameError) {
+      res.setHeader("Content-Type", "text/xml");
+      return res
+        .status(200)
+        .send(formatTwilioResponse(`Error: ${error.message}`));
+    }
+
+    return res.status(500).end("Internal Server Error");
+  }
+}
 
 /*
 curl -X POST http://localhost:3000/api/twilio -d "Body=join" -d "From=whatsapp:+1234567890"
