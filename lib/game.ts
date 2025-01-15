@@ -379,11 +379,51 @@ export const handleGameCommand = async (
 
       const gameId = args[0];
       const gameData = await getGameData(gameId);
-      if (!gameData) return formatMessage("Game not found!");
 
-      const gamePlayers = gameData?.players
-        ? Object.values(gameData.players)
-        : [];
+      // If game doesn't exist, create it
+      if (!gameData) {
+        const now = Math.floor(Date.now() / 1000);
+        const newGameData: GameData = {
+          config: {
+            id: gameId,
+            duration: 24 * 3600, // 24 hours
+            maxPlayers: 10,
+            startingResources: GAME_CONSTANTS.DEFAULT_STARTING_RESOURCES,
+            startingDefense: GAME_CONSTANTS.DEFAULT_DEFENSE_POINTS,
+            startingAttack: GAME_CONSTANTS.DEFAULT_ATTACK_POWER,
+            createdAt: now,
+            hostId: playerId,
+          },
+          players: {},
+          status: "active",
+        };
+
+        // Set up the player's state for the new game
+        state.gameId = gameId;
+        state.resources = newGameData.config.startingResources;
+        state.defensePoints = newGameData.config.startingDefense;
+        state.attackPower = newGameData.config.startingAttack;
+
+        // Add player to game data
+        newGameData.players[playerId] = state;
+
+        // Save the new game
+        await saveGameData(gameId, newGameData);
+
+        return formatMessage(
+          `*Game Created!*\nYou've created and joined game '${gameId}'.\n\n` +
+            "🎮 *Available Commands:*\n" +
+            "• *attack <player>*: Attack another player\n" +
+            "• *defend*: Boost your defense\n" +
+            "• *collect*: Gather resources\n" +
+            "• *alliance <player>*: Propose alliance\n" +
+            "• *status*: Check your status\n" +
+            "• *players*: List all players\n" +
+            "• *leave*: Leave the game"
+        );
+      }
+
+      const gamePlayers = Object.values(gameData.players);
       if (gamePlayers.length >= gameData.config.maxPlayers)
         return formatMessage("Game is full!");
 
@@ -394,9 +434,6 @@ export const handleGameCommand = async (
 
       // Add player to game data
       gameData.players[playerId] = state;
-      if (gamePlayers.length === 0) {
-        gameData.status = "active"; // Start game when first player joins
-      }
       await saveGameData(gameId, gameData);
 
       return formatMessage(
