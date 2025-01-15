@@ -1,5 +1,11 @@
 import { Redis } from "@upstash/redis";
 import Fuse from "fuse.js";
+import {
+  isValidLanguage,
+  getTranslation,
+  getAvailableLanguages,
+  SupportedLanguage,
+} from "./languages";
 
 const redis = Redis.fromEnv();
 
@@ -18,6 +24,7 @@ export class GameError extends Error {
  */
 export const COMMANDS = {
   JOIN: "join",
+  CREATE: "create",
   ATTACK: "attack",
   COLLECT: "collect",
   ALLIANCE: "alliance",
@@ -28,6 +35,7 @@ export const COMMANDS = {
   DEFEND: "defend",
   LEAVE: "leave",
   HISTORY: "history",
+  CONFIG: "config",
 } as const;
 
 export type GameCommand = keyof typeof COMMANDS;
@@ -41,6 +49,8 @@ export type CommandHandler = (
  */
 export const validateGameConfig = (config: Partial<GameConfig>): GameConfig => {
   if (!config.id) throw new GameError("INVALID_CONFIG", "Game ID is required");
+  if (!config.name)
+    throw new GameError("INVALID_CONFIG", "Game name is required");
   if (!config.duration || config.duration <= 0)
     throw new GameError("INVALID_CONFIG", "Invalid game duration");
   if (!config.maxPlayers || config.maxPlayers <= 1)
@@ -48,6 +58,7 @@ export const validateGameConfig = (config: Partial<GameConfig>): GameConfig => {
 
   return {
     id: config.id,
+    name: config.name,
     duration: config.duration,
     maxPlayers: config.maxPlayers,
     startingResources:
@@ -88,6 +99,7 @@ export const GAME_CONSTANTS = {
 
 export interface GameConfig {
   id: string;
+  name: string;
   duration: number; // Game duration in seconds
   maxPlayers: number;
   startingResources: number;
@@ -119,6 +131,7 @@ export interface PlayerState {
   level: number;
   registered: boolean;
   successfulBattles: number;
+  language: string;
   messageHistory: string[]; // Store last 5 messages
   lastMessage?: string; // Store the last message for "." command
 }
@@ -173,6 +186,7 @@ export const getPlayerState = async (
     level: 1,
     registered: false,
     successfulBattles: 0,
+    language: "en",
     messageHistory: [],
   };
 };
@@ -295,11 +309,11 @@ const matchCommand = (input: string): string | null => {
   return results.length > 0 ? results[0].item : null;
 };
 
-const handleHelpCommand = async (playerId: string): Promise<string> => {
-  const state = await getPlayerState(playerId);
+const handleHelpCommand = async (): Promise<string> => {
   let helpMessage =
     "*Available Commands:*\n" +
     "• *register <n>*: Set your player name\n" +
+    "• *create <n>*: Create a new game\n" +
     "• *join <game_id>*: Join a game\n" +
     "• *attack <player>*: Attack another player\n" +
     "• *defend*: Boost your defense\n" +
@@ -307,9 +321,20 @@ const handleHelpCommand = async (playerId: string): Promise<string> => {
     "• *alliance <player>*: Propose alliance\n" +
     "• *status*: Check your status\n" +
     "• *players*: List all players\n" +
-    "• *leave*: Leave current game";
+    "• *leave*: Leave current game\n" +
+    "• *config lang <language>*: Set your language";
 
   return formatMessage(helpMessage);
+};
+
+const configInstructions = (): string => {
+  let instructions = "• *config <language>*: Set your language\n";
+  return formatMessage(instructions);
+};
+
+// Generate a random 5-digit game ID
+const generateGameId = (): string => {
+  return Math.floor(10000 + Math.random() * 90000).toString();
 };
 
 export const handleGameCommand = async (
@@ -341,7 +366,7 @@ export const handleGameCommand = async (
   // Match the command using fuzzy search
   const matchedCommand = matchCommand(command.toLowerCase());
   if (!matchedCommand) {
-    return handleHelpCommand(playerId);
+    return handleHelpCommand();
   }
 
   // Add message history command
@@ -359,6 +384,21 @@ export const handleGameCommand = async (
 
   // Regular game commands
   switch (matchedCommand) {
+    case COMMANDS.ATTACK:
+      if (!state.registered || !state.gameId)
+        return formatMessage("Please join a game first!");
+      if (args.length === 0)
+        return formatMessage("Please provide a player to attack!");
+      const targetPlayer = await findPlayerByName(args[0]);
+      if (!targetPlayer)
+        return formatMessage("Player not found! Please try again.");
+      const { damage, stolenCoins } = calculateDamage(state, targetPlayer);
+      state.resources += stolenCoins;
+      targetPlayer.resources -= damage;
+      await savePlayerState(playerId, state);
+      await savePlayerState(targetPlayer.id, targetPlayer);
+      return formatMessage(`*Attack successful!* ${damage} coins stolen.`);
+
     case COMMANDS.REGISTER:
       if (state.registered) return formatMessage("You are already registered!");
       if (args.length === 0) return formatMessage("Please provide your name!");
@@ -367,6 +407,56 @@ export const handleGameCommand = async (
       await savePlayerState(playerId, state);
       return formatMessage(
         `*Welcome ${state.name}!* You've been registered successfully. Type 'join <game_id>' to join a game!`
+      );
+
+    case COMMANDS.CREATE:
+      if (!state.registered)
+        return formatMessage(
+          "Please register first using 'register <your_name>'"
+        );
+      if (args.length === 0)
+        return formatMessage("Please provide a name for the game!");
+
+      const gameName = args.join(" ");
+      const newGameId = generateGameId();
+      const newGameData: GameData = {
+        config: {
+          id: newGameId,
+          name: gameName,
+          duration: 24 * 3600, // 24 hours
+          maxPlayers: 10,
+          startingResources: GAME_CONSTANTS.DEFAULT_STARTING_RESOURCES,
+          startingDefense: GAME_CONSTANTS.DEFAULT_DEFENSE_POINTS,
+          startingAttack: GAME_CONSTANTS.DEFAULT_ATTACK_POWER,
+          createdAt: now,
+          hostId: playerId,
+        },
+        players: {},
+        status: "active",
+      };
+
+      // Set up the player's state for the new game
+      state.gameId = newGameId;
+      state.resources = newGameData.config.startingResources;
+      state.defensePoints = newGameData.config.startingDefense;
+      state.attackPower = newGameData.config.startingAttack;
+
+      // Add player to game data
+      newGameData.players[playerId] = state;
+
+      // Save the new game
+      await saveGameData(newGameId, newGameData);
+
+      return formatMessage(
+        `*Game Created!*\nGame '${gameName}' created with ID: ${newGameId}\n\n` +
+          "🎮 *Available Commands:*\n" +
+          "• *attack <player>*: Attack another player\n" +
+          "• *defend*: Boost your defense\n" +
+          "• *collect*: Gather resources\n" +
+          "• *alliance <player>*: Propose alliance\n" +
+          "• *status*: Check your status\n" +
+          "• *players*: List all players\n" +
+          "• *leave*: Leave the game"
       );
 
     case COMMANDS.JOIN:
@@ -380,46 +470,9 @@ export const handleGameCommand = async (
       const gameId = args[0];
       const gameData = await getGameData(gameId);
 
-      // If game doesn't exist, create it
       if (!gameData) {
-        const now = Math.floor(Date.now() / 1000);
-        const newGameData: GameData = {
-          config: {
-            id: gameId,
-            duration: 24 * 3600, // 24 hours
-            maxPlayers: 10,
-            startingResources: GAME_CONSTANTS.DEFAULT_STARTING_RESOURCES,
-            startingDefense: GAME_CONSTANTS.DEFAULT_DEFENSE_POINTS,
-            startingAttack: GAME_CONSTANTS.DEFAULT_ATTACK_POWER,
-            createdAt: now,
-            hostId: playerId,
-          },
-          players: {},
-          status: "active",
-        };
-
-        // Set up the player's state for the new game
-        state.gameId = gameId;
-        state.resources = newGameData.config.startingResources;
-        state.defensePoints = newGameData.config.startingDefense;
-        state.attackPower = newGameData.config.startingAttack;
-
-        // Add player to game data
-        newGameData.players[playerId] = state;
-
-        // Save the new game
-        await saveGameData(gameId, newGameData);
-
         return formatMessage(
-          `*Game Created!*\nYou've created and joined game '${gameId}'.\n\n` +
-            "🎮 *Available Commands:*\n" +
-            "• *attack <player>*: Attack another player\n" +
-            "• *defend*: Boost your defense\n" +
-            "• *collect*: Gather resources\n" +
-            "• *alliance <player>*: Propose alliance\n" +
-            "• *status*: Check your status\n" +
-            "• *players*: List all players\n" +
-            "• *leave*: Leave the game"
+          "Game not found! Use 'create <name>' to create a new game."
         );
       }
 
@@ -442,7 +495,7 @@ export const handleGameCommand = async (
       await saveGameData(gameId, gameData);
 
       return formatMessage(
-        "*Welcome to Alliance Wars!*\n\n" +
+        `*Welcome to ${gameData.config.name}!*\n\n` +
           "🎮 *Available Commands:*\n" +
           "• *attack <player>*: Attack another player\n" +
           "• *defend*: Boost your defense\n" +
@@ -479,8 +532,73 @@ export const handleGameCommand = async (
       const playerList = players.map((p) => `• ${p.name}`).join("\n");
       return formatMessage(`*Players in the game:*\n${playerList}`);
 
+    case COMMANDS.COLLECT:
+      if (!state.registered || !state.gameId)
+        return formatMessage("Please join a game first!");
+      const collectionAmount = calculateCollection(state);
+      state.resources += collectionAmount;
+      state.lastCollect = now;
+      await savePlayerState(playerId, state);
+      return formatMessage(`*Collected ${collectionAmount} coins!*`);
+
+    case COMMANDS.ALLIANCE:
+      if (!state.registered || !state.gameId)
+        return formatMessage("Please join a game first!");
+      if (args.length === 0)
+        return formatMessage("Please provide a player to propose alliance!");
+      const allianceTarget = await findPlayerByName(args[0]);
+      if (!allianceTarget)
+        return formatMessage("Player not found! Please try again.");
+
+      state.pendingAlliances.push(allianceTarget.id);
+      await savePlayerState(playerId, state);
+      return formatMessage(
+        `*Alliance proposal sent to ${allianceTarget.name}!*`
+      );
+
+    case COMMANDS.STATUS:
+      return formatMessage(
+        `*Status:*\n` +
+          `• Name: ${state.name}\n` +
+          `• Game ID: ${state.gameId}\n` +
+          `• Resources: ${state.resources}\n` +
+          `• Defense: ${state.defensePoints}\n` +
+          `• Attack: ${state.attackPower}\n` +
+          `• Level: ${state.level}`
+      );
+
+    case COMMANDS.LEAVE:
+      if (!state.registered || !state.gameId)
+        return formatMessage("Please join a game first!");
+      state.gameId = "";
+      await savePlayerState(playerId, state);
+      return formatMessage("*You have left the game.*");
+
+    case COMMANDS.CONFIG:
+      if (args.length < 2 || args[0] !== "lang") {
+        return formatMessage(configInstructions());
+      }
+      const newLang = args[1].toLowerCase();
+      if (!isValidLanguage(newLang)) {
+        return formatMessage(
+          getTranslation("en", "invalid_language", {
+            languages: getAvailableLanguages(),
+          })
+        );
+      }
+      state.language = newLang;
+      await savePlayerState(playerId, state);
+      return formatMessage(
+        getTranslation(newLang as SupportedLanguage, "language_updated", {
+          language: newLang,
+        })
+      );
+
+    case COMMANDS.HELP:
+      return handleHelpCommand();
+
     default:
-      return handleHelpCommand(playerId);
+      return handleHelpCommand();
   }
 };
 

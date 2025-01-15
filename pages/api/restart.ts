@@ -38,12 +38,14 @@ export default async function handler(
       successfulBattles: 0,
       messageHistory: [],
       lastMessage: undefined,
+      language: "en",
     };
 
     // Create a new game with admin as host
     const initialGameData: GameData = {
       config: {
         id: "admin-game",
+        name: "Admin Game",
         duration: 24 * 3600, // 24 hours
         maxPlayers: 10,
         startingResources: GAME_CONSTANTS.DEFAULT_STARTING_RESOURCES,
