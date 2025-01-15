@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Redis } from "@upstash/redis";
-import { PlayerState, COMMANDS } from "../lib/game";
+import { PlayerState, COMMANDS, GameData } from "../lib/game";
 import Fuse from "fuse.js";
 
 type Command = {
@@ -20,21 +20,29 @@ type HelpResponse = {
 export async function getServerSideProps() {
   try {
     const redis = Redis.fromEnv();
-    const keys = await redis.keys("player:*");
-    const values = await redis.mget(keys);
-    return { props: { keys, values } };
+    const gameKeys = await redis.keys("game:*");
+    const games = await Promise.all(
+      gameKeys.map(async (key) => await redis.get<GameData>(key))
+    );
+
+    // Extract all players from all games
+    const players = games.flatMap((game) =>
+      game ? Object.values(game.players) : []
+    );
+
+    return { props: { games, players } };
   } catch (error) {
     console.error(error);
-    return { props: { keys: [], values: [] } };
+    return { props: { games: [], players: [] } };
   }
 }
 
 export default function Home({
-  keys,
-  values,
+  games,
+  players,
 }: {
-  keys: string[];
-  values: string[];
+  games: GameData[];
+  players: PlayerState[];
 }) {
   const [command, setCommand] = useState("");
   const [messages, setMessages] = useState<string[]>([]);

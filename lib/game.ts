@@ -102,6 +102,12 @@ export interface GameConfig {
   hostId: string;
 }
 
+export interface GameData {
+  config: GameConfig;
+  players: Record<string, PlayerState>;
+  status: "pending" | "active" | "completed";
+}
+
 export interface PlayerState {
   id: string;
   name: string;
@@ -123,43 +129,76 @@ export interface PlayerState {
   lastMessage?: string; // Store the last message for "." command
 }
 
+export const getGameData = async (gameId: string): Promise<GameData | null> => {
+  return await redis.get<GameData>(`game:${gameId}`);
+};
+
+export const saveGameData = async (
+  gameId: string,
+  data: GameData
+): Promise<void> => {
+  await redis.set(`game:${gameId}`, data);
+};
+
 export const getPlayerState = async (
   playerId: string
 ): Promise<PlayerState> => {
-  const state = await redis.get<PlayerState>(`player:${playerId}`);
-  if (!state) {
-    return {
-      id: playerId,
-      name: "",
-      gameId: "",
-      resources: GAME_CONSTANTS.DEFAULT_STARTING_RESOURCES,
-      defensePoints: GAME_CONSTANTS.DEFAULT_DEFENSE_POINTS,
-      attackPower: GAME_CONSTANTS.DEFAULT_ATTACK_POWER,
-      lastAttack: 0,
-      lastCollect: 0,
-      lastDefense: 0,
-      lastRecoveryCheck: 0,
-      alliances: [],
-      pendingAlliances: [],
-      level: 1,
-      registered: false,
-      successfulBattles: 0,
-      messageHistory: [],
-    };
+  // First try to find the player in any game
+  const gameKeys = await redis.keys("game:*");
+  for (const gameKey of gameKeys) {
+    const gameData = await redis.get<GameData>(gameKey);
+    if (gameData && gameData.players[playerId]) {
+      return gameData.players[playerId];
+    }
   }
-  return state;
+
+  // If not found, return default state
+  return {
+    id: playerId,
+    name: "",
+    gameId: "",
+    resources: GAME_CONSTANTS.DEFAULT_STARTING_RESOURCES,
+    defensePoints: GAME_CONSTANTS.DEFAULT_DEFENSE_POINTS,
+    attackPower: GAME_CONSTANTS.DEFAULT_ATTACK_POWER,
+    lastAttack: 0,
+    lastCollect: 0,
+    lastDefense: 0,
+    lastRecoveryCheck: 0,
+    alliances: [],
+    pendingAlliances: [],
+    level: 1,
+    registered: false,
+    successfulBattles: 0,
+    messageHistory: [],
+  };
 };
 
 export const savePlayerState = async (playerId: string, state: PlayerState) => {
-  await redis.set(`player:${playerId}`, state);
+  if (!state.gameId) {
+    return; // Don't save players not in a game
+  }
+
+  const gameData = await getGameData(state.gameId);
+  if (!gameData) {
+    throw new GameError("GAME_NOT_FOUND", "Game not found");
+  }
+
+  gameData.players[playerId] = state;
+  await saveGameData(state.gameId, gameData);
 };
 
 export const getAllPlayers = async (): Promise<PlayerState[]> => {
-  const keys = await redis.keys("player:*");
-  const players = await Promise.all(
-    keys.map(async (key) => await redis.get<PlayerState>(key))
-  );
-  return players.filter((p): p is PlayerState => p !== null);
+  const gameKeys = await redis.keys("game:*");
+  const allPlayers: PlayerState[] = [];
+
+  for (const gameKey of gameKeys) {
+    const gameData = await redis.get<GameData>(gameKey);
+    if (gameData) {
+      allPlayers.push(...Object.values(gameData.players));
+    }
+  }
+
+  return allPlayers;
 };
 
 // Calculate damage based on attacker's power and defender's defense
@@ -344,7 +383,14 @@ export const handleGameCommand = async (
           createdAt: now,
           hostId: playerId,
         };
-        await redis.set(`game:${gameConfig.id}`, gameConfig);
+
+        const newGameData: GameData = {
+          config: gameConfig,
+          players: {},
+          status: "pending",
+        };
+
+        await saveGameData(gameConfig.id, newGameData);
         return formatMessage(`Game ${gameConfig.id} created successfully!`);
 
       case COMMANDS.DELETE_PLAYER:
@@ -404,18 +450,24 @@ export const handleGameCommand = async (
         return formatMessage("Please provide a game ID to join!");
 
       const gameId = args[0];
-      const targetGame = await redis.get<GameConfig>(`game:${gameId}`);
-      if (!targetGame) return formatMessage("Game not found!");
+      const gameData = await getGameData(gameId);
+      if (!gameData) return formatMessage("Game not found!");
 
-      const gamePlayers = players.filter((p) => p.gameId === gameId);
-      if (gamePlayers.length >= targetGame.maxPlayers)
+      const gamePlayers = Object.values(gameData.players);
+      if (gamePlayers.length >= gameData.config.maxPlayers)
         return formatMessage("Game is full!");
 
       state.gameId = gameId;
-      state.resources = targetGame.startingResources;
-      state.defensePoints = targetGame.startingDefense;
-      state.attackPower = targetGame.startingAttack;
-      await savePlayerState(playerId, state);
+      state.resources = gameData.config.startingResources;
+      state.defensePoints = gameData.config.startingDefense;
+      state.attackPower = gameData.config.startingAttack;
+
+      // Add player to game data
+      gameData.players[playerId] = state;
+      if (gamePlayers.length === 0) {
+        gameData.status = "active"; // Start game when first player joins
+      }
+      await saveGameData(gameId, gameData);
 
       return formatMessage(
         "*Welcome to Alliance Wars!*\n\n" +

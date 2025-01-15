@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { Redis } from "@upstash/redis";
-import { PlayerState } from "../../lib/game";
+import { PlayerState, GameData } from "../../lib/game";
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,38 +13,53 @@ export default async function handler(
   try {
     const redis = Redis.fromEnv();
 
-    // Delete all existing players
-    const allPlayerKeys = await redis.keys("player:*");
-    if (allPlayerKeys.length > 0) {
-      await Promise.all(allPlayerKeys.map((key) => redis.del(key)));
+    // Delete all existing games
+    const allGameKeys = await redis.keys("game:*");
+    if (allGameKeys.length > 0) {
+      await Promise.all(allGameKeys.map((key) => redis.del(key)));
     }
 
-    // Reset the web client's state with admin privileges
-    const initialState: PlayerState & { isAdmin?: boolean } = {
-      id: "web-client",
-      name: "Admin",
-      gameId: "",
-      resources: 1000,
-      defensePoints: 100,
-      attackPower: 100,
-      lastAttack: 0,
-      lastCollect: 0,
-      lastDefense: 0,
-      lastRecoveryCheck: 0,
-      alliances: [],
-      pendingAlliances: [],
-      level: 10,
-      registered: true,
-      isAdmin: true,
-      successfulBattles: 0,
-      messageHistory: [],
-      lastMessage: undefined,
+    // Create a new game with admin as host
+    const initialGameData: GameData = {
+      config: {
+        id: "admin-game",
+        duration: 24 * 3600, // 24 hours
+        maxPlayers: 10,
+        startingResources: 1000,
+        startingDefense: 100,
+        startingAttack: 100,
+        createdAt: Math.floor(Date.now() / 1000),
+        hostId: "web-client",
+      },
+      players: {
+        "web-client": {
+          id: "web-client",
+          name: "Admin",
+          gameId: "admin-game",
+          resources: 1000,
+          defensePoints: 100,
+          attackPower: 100,
+          lastAttack: 0,
+          lastCollect: 0,
+          lastDefense: 0,
+          lastRecoveryCheck: 0,
+          alliances: [],
+          pendingAlliances: [],
+          level: 10,
+          registered: true,
+          isAdmin: true,
+          successfulBattles: 0,
+          messageHistory: [],
+          lastMessage: undefined,
+        },
+      },
+      status: "active",
     };
 
-    await redis.set("player:web-client", initialState);
+    await redis.set("game:admin-game", initialGameData);
     res.status(200).json({
       message:
-        "Game restarted successfully - All players deleted and admin privileges granted",
+        "Game restarted successfully - All games deleted and admin game created",
     });
   } catch (error) {
     console.error("Error restarting game:", error);
