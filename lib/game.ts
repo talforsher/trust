@@ -288,6 +288,7 @@ export const handleGameCommand = async (
 ): Promise<string> => {
   const state = await getPlayerState(playerId);
   const now = Math.floor(Date.now() / 1000);
+  const players = await getAllPlayers();
 
   // Handle "." command to repeat last message
   if (command === ".") {
@@ -406,7 +407,6 @@ export const handleGameCommand = async (
       const targetGame = await redis.get<GameConfig>(`game:${gameId}`);
       if (!targetGame) return formatMessage("Game not found!");
 
-      const players = await getAllPlayers();
       const gamePlayers = players.filter((p) => p.gameId === gameId);
       if (gamePlayers.length >= targetGame.maxPlayers)
         return formatMessage("Game is full!");
@@ -450,6 +450,12 @@ export const handleGameCommand = async (
           `• Boost amount: ${defenseBoost}\n` +
           `• Total defense: ${state.defensePoints}`
       );
+
+    case COMMANDS.LIST_PLAYERS:
+      const playerList = players
+        .map((p) => `• ${p.name} (${p.resources} resources)`)
+        .join("\n");
+      return formatMessage(`*Players in the game:*\n${playerList}`);
 
     default:
       return handleHelpCommand(playerId);
