@@ -13,7 +13,6 @@ type HelpResponse = {
   isHelp: boolean;
   commands: {
     regular: Command[];
-    admin: Command[];
   };
 };
 
@@ -104,7 +103,7 @@ export default function Home({
       await fetch("/api/restart", { method: "POST" });
       setMessages([]);
       setGameState(null);
-      setMessages(["Game restarted! Type 'register <name>' to begin."]);
+      setMessages(["Game restarted! Type 'register <n>' to begin."]);
     } catch (error) {
       setMessages((prev) => [...prev, "Error restarting game"]);
     }
@@ -116,6 +115,45 @@ export default function Home({
         <div className="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
           <div className="max-w-md mx-auto">
             <div className="divide-y divide-gray-200">
+              {/* Active Games Section */}
+              <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
+                <h2 className="text-xl font-bold mb-4">Active Games</h2>
+                <div className="space-y-4">
+                  {games
+                    .filter((game) => game && game.config && game.players)
+                    .map((game, index) => (
+                      <div key={index} className="bg-gray-50 p-4 rounded-lg">
+                        <h3 className="font-semibold">
+                          Game: {game.config.id}
+                        </h3>
+                        <div className="text-sm">
+                          <p>
+                            Players: {Object.keys(game.players).length}/
+                            {game.config.maxPlayers}
+                          </p>
+                          <p>Status: {game.status}</p>
+                          <div className="mt-2">
+                            <h4 className="font-medium">Players:</h4>
+                            <ul className="list-disc pl-5">
+                              {Object.values(game.players)
+                                .filter((player) => player && player.name)
+                                .map((player, pIndex) => (
+                                  <li key={pIndex}>
+                                    {player.name} (Level {player.level})
+                                  </li>
+                                ))}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  {games.length === 0 && (
+                    <p className="text-gray-500 italic">No active games</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Command Interface */}
               <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
                 {helpCommands ? (
                   <div className="space-y-6">
@@ -125,21 +163,6 @@ export default function Home({
                       </h3>
                       <ul className="list-disc pl-5 space-y-2">
                         {helpCommands.regular.map((cmd, i) => (
-                          <li key={i}>
-                            <code className="bg-gray-100 px-1 rounded">
-                              {cmd.name}
-                            </code>
-                            <span className="ml-2">{cmd.description}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold mb-2">
-                        Admin Commands:
-                      </h3>
-                      <ul className="list-disc pl-5 space-y-2">
-                        {helpCommands.admin.map((cmd, i) => (
                           <li key={i}>
                             <code className="bg-gray-100 px-1 rounded">
                               {cmd.name}
