@@ -31,6 +31,9 @@ const validateTwilioRequest = (req: NextApiRequest): boolean => {
 const formatTwilioResponse = (message: string) => {
   const twiml = new twilio.twiml.MessagingResponse();
   twiml.message(message);
+  twiml.media(
+    "https://res.cloudinary.com/efsi/image/upload/v1736759380/maccabi-shoham/hog6iwxfznfrcpndaj3p.jpg"
+  );
   return twiml.toString();
 };
 
@@ -148,7 +151,3 @@ export default async function handler(
     return res.status(500).end("Internal Server Error");
   }
 }
-
-/*
-curl -X POST http://localhost:3000/api/twilio -d "Body=join" -d "From=whatsapp:+1234567890"
-*/
