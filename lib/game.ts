@@ -452,9 +452,7 @@ export const handleGameCommand = async (
       );
 
     case COMMANDS.LIST_PLAYERS:
-      const playerList = players
-        .map((p) => `• ${p.name} (${p.resources} resources)`)
-        .join("\n");
+      const playerList = players.map((p) => `• ${p.name}`).join("\n");
       return formatMessage(`*Players in the game:*\n${playerList}`);
 
     default:
