@@ -137,7 +137,13 @@ export const saveGameData = async (
 export const getPlayerState = async (
   playerId: string
 ): Promise<PlayerState> => {
-  // First try to find the player in any game
+  // First try to find the player's standalone state
+  const playerState = await redis.get<PlayerState>(`player:${playerId}`);
+  if (playerState) {
+    return playerState;
+  }
+
+  // Then try to find the player in any game
   const gameKeys = await redis.keys("game:*");
   for (const gameKey of gameKeys) {
     const gameData = await redis.get<GameData>(gameKey);
@@ -173,7 +179,9 @@ export const getPlayerState = async (
 
 export const savePlayerState = async (playerId: string, state: PlayerState) => {
   if (!state.gameId) {
-    return; // Don't save players not in a game
+    // For players not in a game, store their state directly
+    await redis.set(`player:${playerId}`, state);
+    return;
   }
 
   const gameData = await getGameData(state.gameId);
