@@ -13,28 +13,60 @@ export const COMMANDS = {
   HELP: "help",
   REGISTER: "register",
   LIST_PLAYERS: "players",
+  DEFEND: "defend",
+  LEAVE: "leave",
   // Admin commands
   DELETE_PLAYER: "delete",
   GIVE_RESOURCES: "give",
   SET_LEVEL: "setlevel",
+  CREATE_GAME: "create_game",
 } as const;
 
 // Cooldown times (in seconds)
 export const COOLDOWNS = {
-  ATTACK: 300, // 5 minutes
+  ATTACK: 21600, // 6 hours
   COLLECT: 600, // 10 minutes
+  DEFENSE: 3600, // 1 hour
 };
+
+// Game constants
+export const GAME_CONSTANTS = {
+  WEAK_PLAYER_THRESHOLD: 0.5, // 50% of starting resources
+  RECOVERY_INTERVAL: 86400, // 24 hours in seconds
+  RECOVERY_BOOST_AMOUNT: 50, // Amount of resources to give weak players
+  DEFAULT_STARTING_RESOURCES: 100,
+  DEFAULT_DEFENSE_POINTS: 50,
+  DEFAULT_ATTACK_POWER: 30,
+};
+
+export interface GameConfig {
+  id: string;
+  duration: number; // Game duration in seconds
+  maxPlayers: number;
+  startingResources: number;
+  startingDefense: number;
+  startingAttack: number;
+  createdAt: number;
+  hostId: string;
+}
 
 export interface PlayerState {
   id: string;
   name: string;
+  gameId: string;
   resources: number;
+  defensePoints: number;
+  attackPower: number;
   lastAttack: number;
   lastCollect: number;
+  lastDefense: number;
+  lastRecoveryCheck: number;
   alliances: string[];
+  pendingAlliances: string[];
   level: number;
   registered: boolean;
   isAdmin?: boolean;
+  successfulBattles: number;
 }
 
 export const getPlayerState = async (
@@ -45,12 +77,19 @@ export const getPlayerState = async (
     return {
       id: playerId,
       name: "",
-      resources: 100,
+      gameId: "",
+      resources: GAME_CONSTANTS.DEFAULT_STARTING_RESOURCES,
+      defensePoints: GAME_CONSTANTS.DEFAULT_DEFENSE_POINTS,
+      attackPower: GAME_CONSTANTS.DEFAULT_ATTACK_POWER,
       lastAttack: 0,
       lastCollect: 0,
+      lastDefense: 0,
+      lastRecoveryCheck: 0,
       alliances: [],
+      pendingAlliances: [],
       level: 1,
       registered: false,
+      successfulBattles: 0,
     };
   }
   return state;
@@ -68,15 +107,46 @@ export const getAllPlayers = async (): Promise<PlayerState[]> => {
   return players.filter((p): p is PlayerState => p !== null);
 };
 
-// Calculate damage based on player levels and resources
+// Calculate damage based on attacker's power and defender's defense
 const calculateDamage = (
   attacker: PlayerState,
   defender: PlayerState
-): number => {
-  const baseDamage = 10;
+): { damage: number; stolenCoins: number } => {
+  const rawDamage = Math.max(0, attacker.attackPower - defender.defensePoints);
   const levelMultiplier = attacker.level / defender.level;
-  const resourceFactor = Math.min(attacker.resources / 100, 2); // Cap resource bonus at 2x
-  return Math.floor(baseDamage * levelMultiplier * resourceFactor);
+  const damage = Math.floor(rawDamage * levelMultiplier);
+
+  // Calculate stolen coins (10% of damage dealt)
+  const stolenCoins = Math.floor(damage * 0.1);
+
+  return { damage, stolenCoins };
+};
+
+// Check if player needs recovery boost
+const checkAndApplyRecovery = async (
+  player: PlayerState
+): Promise<PlayerState> => {
+  const now = Math.floor(Date.now() / 1000);
+
+  // Only check once per recovery interval
+  if (now - player.lastRecoveryCheck < GAME_CONSTANTS.RECOVERY_INTERVAL) {
+    return player;
+  }
+
+  // Check if resources are below threshold
+  if (
+    player.resources <
+    GAME_CONSTANTS.DEFAULT_STARTING_RESOURCES *
+      GAME_CONSTANTS.WEAK_PLAYER_THRESHOLD
+  ) {
+    player.resources += GAME_CONSTANTS.RECOVERY_BOOST_AMOUNT;
+    player.defensePoints += Math.floor(
+      GAME_CONSTANTS.RECOVERY_BOOST_AMOUNT / 2
+    );
+  }
+
+  player.lastRecoveryCheck = now;
+  return player;
 };
 
 // Calculate resource collection based on player level
@@ -138,6 +208,9 @@ export const handleGameCommand = async (
   const state = await getPlayerState(playerId);
   const now = Math.floor(Date.now() / 1000);
 
+  // Check for recovery boost
+  await checkAndApplyRecovery(state);
+
   // Match the command using fuzzy search
   const matchedCommand = matchCommand(command.toLowerCase());
   if (!matchedCommand) {
@@ -149,6 +222,24 @@ export const handleGameCommand = async (
   // Admin commands
   if (isAdmin(state)) {
     switch (matchedCommand) {
+      case COMMANDS.CREATE_GAME:
+        if (args.length < 3)
+          return formatMessage(
+            "Usage: create_game <game_id> <duration_hours> <max_players>"
+          );
+        const gameConfig: GameConfig = {
+          id: args[0],
+          duration: parseInt(args[1]) * 3600, // Convert hours to seconds
+          maxPlayers: parseInt(args[2]),
+          startingResources: GAME_CONSTANTS.DEFAULT_STARTING_RESOURCES,
+          startingDefense: GAME_CONSTANTS.DEFAULT_DEFENSE_POINTS,
+          startingAttack: GAME_CONSTANTS.DEFAULT_ATTACK_POWER,
+          createdAt: now,
+          hostId: playerId,
+        };
+        await redis.set(`game:${gameConfig.id}`, gameConfig);
+        return formatMessage(`Game ${gameConfig.id} created successfully!`);
+
       case COMMANDS.DELETE_PLAYER:
         if (args.length === 0)
           return formatMessage("Please specify a player name!");
@@ -192,7 +283,7 @@ export const handleGameCommand = async (
       state.registered = true;
       await savePlayerState(playerId, state);
       return formatMessage(
-        `*Welcome ${state.name}!* You've been registered successfully. Type 'join' to start playing!`
+        `*Welcome ${state.name}!* You've been registered successfully. Type 'join <game_id>' to join a game!`
       );
 
     case COMMANDS.JOIN:
@@ -200,35 +291,66 @@ export const handleGameCommand = async (
         return formatMessage(
           "Please register first using 'register <your_name>'"
         );
+      if (args.length === 0)
+        return formatMessage("Please provide a game ID to join!");
+
+      const gameId = args[0];
+      const targetGame = await redis.get<GameConfig>(`game:${gameId}`);
+      if (!targetGame) return formatMessage("Game not found!");
+
+      const players = await getAllPlayers();
+      const gamePlayers = players.filter((p) => p.gameId === gameId);
+      if (gamePlayers.length >= targetGame.maxPlayers)
+        return formatMessage("Game is full!");
+
+      state.gameId = gameId;
+      state.resources = targetGame.startingResources;
+      state.defensePoints = targetGame.startingDefense;
+      state.attackPower = targetGame.startingAttack;
       await savePlayerState(playerId, state);
+
       return formatMessage(
         "*Welcome to Alliance Wars!*\n\n" +
           "🎮 *Available Commands:*\n" +
-          "• *register <name>*: Set your player name\n" +
           "• *attack <player>*: Attack another player\n" +
+          "• *defend*: Boost your defense\n" +
           "• *collect*: Gather resources\n" +
           "• *alliance <player>*: Propose alliance\n" +
           "• *status*: Check your status\n" +
-          "• *players*: List all players"
+          "• *players*: List all players\n" +
+          "• *leave*: Leave the game"
       );
 
-    case COMMANDS.LIST_PLAYERS:
-      const players = await getAllPlayers();
+    case COMMANDS.DEFEND:
+      if (!state.registered || !state.gameId)
+        return formatMessage("Please join a game first!");
+      if (now - state.lastDefense < COOLDOWNS.DEFENSE) {
+        return formatMessage(
+          `⏳ Defense Cooldown: ${
+            COOLDOWNS.DEFENSE - (now - state.lastDefense)
+          } seconds remaining`
+        );
+      }
+
+      const defenseBoost = Math.floor(state.level * 5);
+      state.defensePoints += defenseBoost;
+      state.lastDefense = now;
+      await savePlayerState(playerId, state);
+
       return formatMessage(
-        "*Available Players:*\n" +
-          players
-            .filter((p) => p.registered && p.id !== playerId)
-            .map((p) => `• ${p.name} (Level ${p.level})`)
-            .join("\n")
+        `🛡️ *Defense Boosted!*\n` +
+          `• Boost amount: ${defenseBoost}\n` +
+          `• Total defense: ${state.defensePoints}`
       );
 
     case COMMANDS.ATTACK:
-      if (!state.registered) return formatMessage("Please register first!");
+      if (!state.registered || !state.gameId)
+        return formatMessage("Please join a game first!");
       if (args.length === 0)
         return formatMessage("Please specify a player name to attack!");
       if (now - state.lastAttack < COOLDOWNS.ATTACK) {
         return formatMessage(
-          `⏳ Cooldown: ${
+          `⏳ Attack Cooldown: ${
             COOLDOWNS.ATTACK - (now - state.lastAttack)
           } seconds remaining`
         );
@@ -245,47 +367,125 @@ export const handleGameCommand = async (
         return formatMessage("You cannot attack yourself!");
       }
 
-      const damage = calculateDamage(state, targetPlayer);
-      targetPlayer.resources = Math.max(0, targetPlayer.resources - damage);
+      if (state.alliances.includes(targetPlayer.id)) {
+        return formatMessage("You cannot attack your ally!");
+      }
+
+      const { damage, stolenCoins } = calculateDamage(state, targetPlayer);
+      targetPlayer.resources = Math.max(
+        0,
+        targetPlayer.resources - stolenCoins
+      );
+      state.resources += stolenCoins;
       state.lastAttack = now;
+      state.successfulBattles++;
 
       await savePlayerState(targetPlayer.id, targetPlayer);
       await savePlayerState(playerId, state);
+
       return formatMessage(
         `⚔️ *Attack Results:*\n` +
           `• Damage dealt: ${damage}\n` +
-          `• ${targetPlayer.name}'s resources: ${targetPlayer.resources}`
+          `• Coins stolen: ${stolenCoins}\n` +
+          `• ${targetPlayer.name}'s remaining resources: ${targetPlayer.resources}\n` +
+          `• Your resources: ${state.resources}`
       );
 
-    case COMMANDS.COLLECT:
-      if (!state.registered) return formatMessage("Please register first!");
-      if (now - state.lastCollect < COOLDOWNS.COLLECT) {
+    case COMMANDS.ALLIANCE:
+      if (!state.registered || !state.gameId)
+        return formatMessage("Please join a game first!");
+      if (args.length === 0)
         return formatMessage(
-          `⏳ Cooldown: ${
-            COOLDOWNS.COLLECT - (now - state.lastCollect)
-          } seconds remaining`
+          "Please specify a player name to propose an alliance!"
+        );
+
+      const allyName = args.join(" ");
+      const allyPlayer = await findPlayerByName(allyName);
+      if (!allyPlayer) {
+        return formatMessage("Could not find a player with that name!");
+      }
+
+      if (allyPlayer.id === playerId) {
+        return formatMessage("You cannot form an alliance with yourself!");
+      }
+
+      if (state.alliances.includes(allyPlayer.id)) {
+        return formatMessage("You are already allied with this player!");
+      }
+
+      // Check if both players have proposed to each other
+      if (allyPlayer.pendingAlliances.includes(state.id)) {
+        // Form the alliance
+        state.alliances.push(allyPlayer.id);
+        allyPlayer.alliances.push(state.id);
+        // Clear pending proposals
+        state.pendingAlliances = state.pendingAlliances.filter(
+          (id) => id !== allyPlayer.id
+        );
+        allyPlayer.pendingAlliances = allyPlayer.pendingAlliances.filter(
+          (id) => id !== state.id
+        );
+        await savePlayerState(allyPlayer.id, allyPlayer);
+        await savePlayerState(playerId, state);
+        return formatMessage(
+          `🤝 *Alliance Formed!*\n` +
+            `• You are now allied with ${allyPlayer.name}!\n` +
+            `• You can share resources and coordinate attacks.`
+        );
+      } else {
+        // Add pending alliance
+        state.pendingAlliances.push(allyPlayer.id);
+        await savePlayerState(playerId, state);
+        return formatMessage(
+          `🤝 *Alliance Proposal:*\n` +
+            `• You have proposed an alliance with ${allyPlayer.name}!\n` +
+            `• Waiting for them to accept.`
         );
       }
 
-      const collected = calculateCollection(state);
-      state.resources += collected;
-      state.lastCollect = now;
+    case COMMANDS.LEAVE:
+      if (!state.registered || !state.gameId)
+        return formatMessage("You are not in a game!");
+
+      state.gameId = "";
+      state.resources = GAME_CONSTANTS.DEFAULT_STARTING_RESOURCES;
+      state.defensePoints = GAME_CONSTANTS.DEFAULT_DEFENSE_POINTS;
+      state.attackPower = GAME_CONSTANTS.DEFAULT_ATTACK_POWER;
+      state.alliances = [];
+      state.pendingAlliances = [];
       await savePlayerState(playerId, state);
+
       return formatMessage(
-        `💰 *Resources Collected!*\n` +
-          `• Amount: ${collected}\n` +
-          `• Total resources: ${state.resources}`
+        "You have left the game. Join another one with 'join <game_id>'!"
       );
 
     case COMMANDS.STATUS:
       if (!state.registered) return formatMessage("Please register first!");
+      if (!state.gameId) return formatMessage("Please join a game first!");
+
+      const currentGame = await redis.get<GameConfig>(`game:${state.gameId}`);
+      const timeLeft = currentGame
+        ? Math.max(0, currentGame.createdAt + currentGame.duration - now)
+        : 0;
+
       return formatMessage(
         `📊 *Player Status:*\n` +
           `• Name: ${state.name}\n` +
           `• Level: ${state.level}\n` +
           `• Resources: ${state.resources}\n` +
+          `• Defense Points: ${state.defensePoints}\n` +
+          `• Attack Power: ${state.attackPower}\n` +
+          `• Successful Battles: ${state.successfulBattles}\n` +
+          `• Game Time Left: ${Math.floor(timeLeft / 3600)}h ${Math.floor(
+            (timeLeft % 3600) / 60
+          )}m\n` +
           `• Alliances: ${
             state.alliances.length ? state.alliances.join(", ") : "None"
+          }\n` +
+          `• Pending Alliances: ${
+            state.pendingAlliances.length
+              ? state.pendingAlliances.join(", ")
+              : "None"
           }\n` +
           `• Attack: ${
             now - state.lastAttack >= COOLDOWNS.ATTACK
@@ -296,49 +496,31 @@ export const handleGameCommand = async (
             now - state.lastCollect >= COOLDOWNS.COLLECT
               ? "✅ Ready"
               : "⏳ Cooling down"
+          }\n` +
+          `• Defense: ${
+            now - state.lastDefense >= COOLDOWNS.DEFENSE
+              ? "✅ Ready"
+              : "⏳ Cooling down"
           }`
-      );
-
-    case COMMANDS.ALLIANCE:
-      if (!state.registered) return formatMessage("Please register first!");
-      if (args.length === 0)
-        return formatMessage(
-          "Please specify a player name to propose an alliance!"
-        );
-
-      const alliancePlayer = await findPlayerByName(args.join(" "));
-      if (!alliancePlayer) {
-        return formatMessage("Could not find a player with that name!");
-      }
-
-      if (alliancePlayer.id === playerId) {
-        return formatMessage("You cannot propose an alliance with yourself!");
-      }
-
-      if (state.alliances.includes(alliancePlayer.id)) {
-        return formatMessage("You are already allied with this player!");
-      }
-
-      state.alliances.push(alliancePlayer.id);
-      await savePlayerState(playerId, state);
-      return formatMessage(
-        `🤝 *Alliance Proposal:*\n` +
-          `• You have proposed an alliance with ${alliancePlayer.name}!`
       );
 
     case COMMANDS.HELP:
       let helpMessage =
         "*Available Commands:*\n" +
         "• *register <name>*: Set your player name\n" +
+        "• *join <game_id>*: Join a game\n" +
         "• *attack <player>*: Attack another player\n" +
+        "• *defend*: Boost your defense\n" +
         "• *collect*: Gather resources\n" +
         "• *alliance <player>*: Propose alliance\n" +
         "• *status*: Check your status\n" +
-        "• *players*: List all players";
+        "• *players*: List all players\n" +
+        "• *leave*: Leave current game";
 
       if (isAdmin(state)) {
         helpMessage +=
           "\n\n*Admin Commands:*\n" +
+          "• *create_game <game_id> <duration_hours> <max_players>*: Create a new game\n" +
           "• *delete <player>*: Delete a player\n" +
           "• *give <player> <amount>*: Give resources to a player\n" +
           "• *setlevel <player> <level>*: Set a player's level";

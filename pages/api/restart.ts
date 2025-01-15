@@ -23,13 +23,20 @@ export default async function handler(
     const initialState: PlayerState & { isAdmin?: boolean } = {
       id: "web-client",
       name: "Admin",
-      resources: 1000, // More starting resources for admin
+      gameId: "",
+      resources: 1000,
+      defensePoints: 100,
+      attackPower: 100,
       lastAttack: 0,
       lastCollect: 0,
+      lastDefense: 0,
+      lastRecoveryCheck: 0,
       alliances: [],
-      level: 10, // Higher starting level for admin
-      registered: true, // Auto-registered
-      isAdmin: true, // Special admin flag
+      pendingAlliances: [],
+      level: 10,
+      registered: true,
+      isAdmin: true,
+      successfulBattles: 0,
     };
 
     await redis.set("player:web-client", initialState);
