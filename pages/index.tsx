@@ -3,6 +3,20 @@ import { Redis } from "@upstash/redis";
 import { PlayerState, COMMANDS } from "../lib/game";
 import Fuse from "fuse.js";
 
+type Command = {
+  name: string;
+  description: string;
+};
+
+type HelpResponse = {
+  success: boolean;
+  isHelp: boolean;
+  commands: {
+    regular: Command[];
+    admin: Command[];
+  };
+};
+
 export async function getServerSideProps() {
   try {
     const redis = Redis.fromEnv();
@@ -25,6 +39,9 @@ export default function Home({
   const [command, setCommand] = useState("");
   const [messages, setMessages] = useState<string[]>([]);
   const [gameState, setGameState] = useState<PlayerState | null>(null);
+  const [helpCommands, setHelpCommands] = useState<
+    HelpResponse["commands"] | null
+  >(null);
 
   // Initialize Fuse for command matching
   const commandFuse = new Fuse(Object.values(COMMANDS), {
@@ -52,23 +69,18 @@ export default function Home({
       });
 
       const data = await response.json();
-      setMessages((prev) => [...prev, `> ${command}`, data.message]);
-      setCommand("");
 
-      // Refresh game state
-      try {
-        const stateResponse = await fetch("/api/status");
-        if (!stateResponse.ok) {
-          console.error("Status response not OK:", await stateResponse.text());
-          return;
-        }
-        const newState = await stateResponse.json();
-        setGameState(newState);
-      } catch (error) {
-        console.error("Error fetching game state:", error);
+      if (data.isHelp) {
+        setHelpCommands(data.commands);
+      } else {
+        setMessages((prev) => [...prev, data.message || data.error]);
       }
+
+      // Clear command after sending
+      setCommand("");
     } catch (error) {
-      setMessages((prev) => [...prev, "Error processing command"]);
+      console.error("Error sending command:", error);
+      setMessages((prev) => [...prev, "Error sending command"]);
     }
   };
 
@@ -84,66 +96,74 @@ export default function Home({
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-4">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Alliance Wars</h1>
-            <button
-              onClick={handleRestart}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
-            >
-              Restart Game
-            </button>
-          </div>
-
-          {gameState && (
-            <div className="bg-gray-50 p-4 rounded-lg mb-4">
-              <h2 className="font-bold mb-2">Player Status</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div>Name: {gameState.name}</div>
-                <div>Level: {gameState.level}</div>
-                <div>Resources: {gameState.resources}</div>
-                <div>Alliances: {gameState.alliances.length}</div>
+    <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
+      <div className="relative py-3 sm:max-w-xl sm:mx-auto">
+        <div className="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
+          <div className="max-w-md mx-auto">
+            <div className="divide-y divide-gray-200">
+              <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
+                {helpCommands ? (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-bold mb-2">
+                        Available Commands:
+                      </h3>
+                      <ul className="list-disc pl-5 space-y-2">
+                        {helpCommands.regular.map((cmd, i) => (
+                          <li key={i}>
+                            <code className="bg-gray-100 px-1 rounded">
+                              {cmd.name}
+                            </code>
+                            <span className="ml-2">{cmd.description}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold mb-2">
+                        Admin Commands:
+                      </h3>
+                      <ul className="list-disc pl-5 space-y-2">
+                        {helpCommands.admin.map((cmd, i) => (
+                          <li key={i}>
+                            <code className="bg-gray-100 px-1 rounded">
+                              {cmd.name}
+                            </code>
+                            <span className="ml-2">{cmd.description}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <button
+                      onClick={() => setHelpCommands(null)}
+                      className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                      Back to Messages
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-y-auto max-h-96 space-y-2">
+                      {messages.map((msg, i) => (
+                        <div key={i} className="p-2 bg-gray-50 rounded">
+                          {msg}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4">
+                      <input
+                        type="text"
+                        value={command}
+                        onChange={(e) => setCommand(e.target.value)}
+                        onKeyPress={(e) => e.key === "Enter" && handleCommand()}
+                        placeholder="Enter command..."
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
-          )}
-
-          <div className="h-96 overflow-y-auto bg-gray-50 p-4 rounded-lg mb-4">
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={`mb-2 ${
-                  msg.startsWith(">") ? "text-blue-600" : "text-gray-800"
-                }`}
-              >
-                {msg}
-              </div>
-            ))}
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={command}
-              onChange={(e) => setCommand(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleCommand()}
-              placeholder="Enter command (e.g., 'help', 'register name')"
-              className="flex-1 p-2 border rounded"
-            />
-            <button
-              onClick={handleCommand}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-            >
-              Send
-            </button>
-          </div>
-
-          <div className="mt-4 text-sm text-gray-600">
-            <p>
-              Available commands: register, join, attack, collect, alliance,
-              status, players
-            </p>
           </div>
         </div>
       </div>

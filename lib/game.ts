@@ -27,6 +27,7 @@ export const COMMANDS = {
   LIST_PLAYERS: "players",
   DEFEND: "defend",
   LEAVE: "leave",
+  HISTORY: "history",
   // Admin commands
   DELETE_PLAYER: "delete",
   GIVE_RESOURCES: "give",
@@ -118,6 +119,8 @@ export interface PlayerState {
   registered: boolean;
   isAdmin?: boolean;
   successfulBattles: number;
+  messageHistory: string[]; // Store last 5 messages
+  lastMessage?: string; // Store the last message for "." command
 }
 
 export const getPlayerState = async (
@@ -141,6 +144,7 @@ export const getPlayerState = async (
       level: 1,
       registered: false,
       successfulBattles: 0,
+      messageHistory: [],
     };
   }
   return state;
@@ -285,6 +289,20 @@ export const handleGameCommand = async (
   const state = await getPlayerState(playerId);
   const now = Math.floor(Date.now() / 1000);
 
+  // Handle "." command to repeat last message
+  if (command === ".") {
+    if (!state.lastMessage) {
+      return formatMessage("No previous command to repeat!");
+    }
+    const [lastCommand, ...lastArgs] = state.lastMessage.split(" ");
+    return handleGameCommand(playerId, lastCommand, lastArgs);
+  }
+
+  // Store the command in message history
+  const fullCommand = [command, ...args].join(" ");
+  updateMessageHistory(state, fullCommand);
+  await savePlayerState(playerId, state);
+
   // Check for recovery boost
   await checkAndApplyRecovery(state);
 
@@ -292,6 +310,19 @@ export const handleGameCommand = async (
   const matchedCommand = matchCommand(command.toLowerCase());
   if (!matchedCommand) {
     return handleHelpCommand(playerId);
+  }
+
+  // Add message history command
+  if (matchedCommand === "history") {
+    if (state.messageHistory.length === 0) {
+      return formatMessage("No command history available.");
+    }
+    const history = state.messageHistory
+      .map((msg, i) => `${i + 1}. ${msg}`)
+      .join("\n");
+    return formatMessage(
+      `Your last ${state.messageHistory.length} commands:\n${history}`
+    );
   }
 
   // Admin commands
@@ -422,5 +453,16 @@ export const handleGameCommand = async (
 
     default:
       return handleHelpCommand(playerId);
+  }
+};
+
+// Add a function to update message history
+const updateMessageHistory = (state: PlayerState, message: string): void => {
+  if (message !== ".") {
+    state.lastMessage = message;
+    state.messageHistory.unshift(message);
+    if (state.messageHistory.length > 5) {
+      state.messageHistory.pop();
+    }
   }
 };

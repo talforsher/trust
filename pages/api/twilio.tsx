@@ -35,6 +35,13 @@ const formatTwilioResponse = (message: string) => {
 };
 
 /**
+ * Checks if the request is from an admin
+ */
+const isAdminRequest = (from: string): boolean => {
+  return from === "web-client";
+};
+
+/**
  * Twilio webhook handler
  * @description Handles incoming WhatsApp messages through Twilio
  */
@@ -72,19 +79,72 @@ export default async function handler(
     // Handle the game command
     const response = await handleGameCommand(from, command, args);
 
-    // Send response
+    // Send response based on request type
+    if (isAdminRequest(from)) {
+      // If it's a help message, structure it for the UI
+      if (command.toLowerCase() === "help" || !command) {
+        const commands = {
+          regular: [
+            { name: "register <name>", description: "Set your player name" },
+            { name: "join <game_id>", description: "Join a game" },
+            { name: "attack <player>", description: "Attack another player" },
+            { name: "defend", description: "Boost your defense" },
+            { name: "collect", description: "Gather resources" },
+            { name: "alliance <player>", description: "Propose alliance" },
+            { name: "status", description: "Check your status" },
+            { name: "players", description: "List all players" },
+            { name: "leave", description: "Leave current game" },
+          ],
+          admin: [
+            {
+              name: "create_game <game_id> <duration_hours> <max_players>",
+              description: "Create a new game",
+            },
+            { name: "delete <player>", description: "Delete a player" },
+            {
+              name: "give <player> <amount>",
+              description: "Give resources to a player",
+            },
+            {
+              name: "setlevel <player> <level>",
+              description: "Set a player's level",
+            },
+          ],
+        };
+        return res.status(200).json({
+          success: true,
+          isHelp: true,
+          commands,
+        });
+      }
+      return res.status(200).json({ success: true, message: response });
+    }
+
+    // Send Twilio response for regular users
     res.setHeader("Content-Type", "text/xml");
     return res.status(200).send(formatTwilioResponse(response));
   } catch (error) {
     console.error("Error processing webhook:", error);
 
     if (error instanceof GameError) {
+      if (isAdminRequest(req.body.From)) {
+        return res.status(200).json({
+          success: false,
+          error: error.message,
+        });
+      }
       res.setHeader("Content-Type", "text/xml");
       return res
         .status(200)
         .send(formatTwilioResponse(`Error: ${error.message}`));
     }
 
+    if (isAdminRequest(req.body.From)) {
+      return res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+      });
+    }
     return res.status(500).end("Internal Server Error");
   }
 }
