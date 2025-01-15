@@ -25,15 +25,10 @@ export async function getServerSideProps() {
       gameKeys.map(async (key) => await redis.get<GameData>(key))
     );
 
-    // Extract all players from all games, safely handling null/undefined
-    const players = games
-      .filter(
-        (game): game is GameData =>
-          game !== null &&
-          game !== undefined &&
-          typeof game.players === "object"
-      )
-      .flatMap((game) => Object.values(game.players));
+    // Extract all players from all games
+    const players = games.flatMap((game) =>
+      game?.players ? Object.values(game.players) : []
+    );
 
     return {
       props: {

@@ -197,7 +197,7 @@ export const getAllPlayers = async (): Promise<PlayerState[]> => {
 
   for (const gameKey of gameKeys) {
     const gameData = await redis.get<GameData>(gameKey);
-    if (gameData) {
+    if (gameData?.players) {
       allPlayers.push(...Object.values(gameData.players));
     }
   }
@@ -457,7 +457,9 @@ export const handleGameCommand = async (
       const gameData = await getGameData(gameId);
       if (!gameData) return formatMessage("Game not found!");
 
-      const gamePlayers = Object.values(gameData.players);
+      const gamePlayers = gameData?.players
+        ? Object.values(gameData.players)
+        : [];
       if (gamePlayers.length >= gameData.config.maxPlayers)
         return formatMessage("Game is full!");
 

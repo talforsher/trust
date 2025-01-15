@@ -4,18 +4,27 @@ import {
   validatePlayerState,
   GameError,
   GAME_CONSTANTS,
+  getGameData,
+  saveGameData,
+  getPlayerState,
+  savePlayerState,
+  getAllPlayers,
+  GameData,
+  PlayerState,
 } from "./game";
 
 // Mock Redis
+const mockRedis = {
+  get: jest.fn().mockImplementation(() => Promise.resolve(null)),
+  set: jest.fn().mockImplementation(() => Promise.resolve("OK")),
+  del: jest.fn().mockImplementation(() => Promise.resolve(1)),
+  keys: jest.fn().mockImplementation(() => Promise.resolve([])),
+  mget: jest.fn().mockImplementation(() => Promise.resolve([])),
+};
+
 jest.mock("@upstash/redis", () => ({
   Redis: {
-    fromEnv: () => ({
-      get: jest.fn().mockImplementation(() => Promise.resolve(null)),
-      set: jest.fn().mockImplementation(() => Promise.resolve("OK")),
-      del: jest.fn().mockImplementation(() => Promise.resolve(1)),
-      keys: jest.fn().mockImplementation(() => Promise.resolve([])),
-      mget: jest.fn().mockImplementation(() => Promise.resolve([])),
-    }),
+    fromEnv: () => mockRedis,
   },
 }));
 
