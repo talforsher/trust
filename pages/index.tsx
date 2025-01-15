@@ -25,12 +25,24 @@ export async function getServerSideProps() {
       gameKeys.map(async (key) => await redis.get<GameData>(key))
     );
 
-    // Extract all players from all games
-    const players = games.flatMap((game) =>
-      game ? Object.values(game.players) : []
-    );
+    // Extract all players from all games, safely handling null/undefined
+    const players = games
+      .filter(
+        (game): game is GameData =>
+          game !== null &&
+          game !== undefined &&
+          typeof game.players === "object"
+      )
+      .flatMap((game) => Object.values(game.players));
 
-    return { props: { games, players } };
+    return {
+      props: {
+        games: games.filter(
+          (g): g is GameData => g !== null && g !== undefined
+        ),
+        players,
+      },
+    };
   } catch (error) {
     console.error(error);
     return { props: { games: [], players: [] } };

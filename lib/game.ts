@@ -147,7 +147,11 @@ export const getPlayerState = async (
   const gameKeys = await redis.keys("game:*");
   for (const gameKey of gameKeys) {
     const gameData = await redis.get<GameData>(gameKey);
-    if (gameData && gameData.players[playerId]) {
+    if (
+      gameData?.players &&
+      typeof gameData.players === "object" &&
+      playerId in gameData.players
+    ) {
       return gameData.players[playerId];
     }
   }

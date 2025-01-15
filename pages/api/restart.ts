@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { Redis } from "@upstash/redis";
-import { PlayerState, GameData } from "../../lib/game";
+import { PlayerState, GameData, GAME_CONSTANTS } from "../../lib/game";
 
 export default async function handler(
   req: NextApiRequest,
@@ -19,39 +19,42 @@ export default async function handler(
       await Promise.all(allGameKeys.map((key) => redis.del(key)));
     }
 
+    const now = Math.floor(Date.now() / 1000);
+    const adminPlayer: PlayerState = {
+      id: "web-client",
+      name: "Admin",
+      gameId: "admin-game",
+      resources: 1000,
+      defensePoints: 100,
+      attackPower: 100,
+      lastAttack: 0,
+      lastCollect: 0,
+      lastDefense: 0,
+      lastRecoveryCheck: 0,
+      alliances: [],
+      pendingAlliances: [],
+      level: 10,
+      registered: true,
+      isAdmin: true,
+      successfulBattles: 0,
+      messageHistory: [],
+      lastMessage: undefined,
+    };
+
     // Create a new game with admin as host
     const initialGameData: GameData = {
       config: {
         id: "admin-game",
         duration: 24 * 3600, // 24 hours
         maxPlayers: 10,
-        startingResources: 1000,
-        startingDefense: 100,
-        startingAttack: 100,
-        createdAt: Math.floor(Date.now() / 1000),
+        startingResources: GAME_CONSTANTS.DEFAULT_STARTING_RESOURCES,
+        startingDefense: GAME_CONSTANTS.DEFAULT_DEFENSE_POINTS,
+        startingAttack: GAME_CONSTANTS.DEFAULT_ATTACK_POWER,
+        createdAt: now,
         hostId: "web-client",
       },
       players: {
-        "web-client": {
-          id: "web-client",
-          name: "Admin",
-          gameId: "admin-game",
-          resources: 1000,
-          defensePoints: 100,
-          attackPower: 100,
-          lastAttack: 0,
-          lastCollect: 0,
-          lastDefense: 0,
-          lastRecoveryCheck: 0,
-          alliances: [],
-          pendingAlliances: [],
-          level: 10,
-          registered: true,
-          isAdmin: true,
-          successfulBattles: 0,
-          messageHistory: [],
-          lastMessage: undefined,
-        },
+        "web-client": adminPlayer,
       },
       status: "active",
     };
