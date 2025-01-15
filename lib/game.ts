@@ -251,6 +251,32 @@ const isAdmin = (state: PlayerState): boolean => {
   return !!state.isAdmin;
 };
 
+const handleHelpCommand = async (playerId: string): Promise<string> => {
+  const state = await getPlayerState(playerId);
+  let helpMessage =
+    "*Available Commands:*\n" +
+    "• *register <n>*: Set your player name\n" +
+    "• *join <game_id>*: Join a game\n" +
+    "• *attack <player>*: Attack another player\n" +
+    "• *defend*: Boost your defense\n" +
+    "• *collect*: Gather resources\n" +
+    "• *alliance <player>*: Propose alliance\n" +
+    "• *status*: Check your status\n" +
+    "• *players*: List all players\n" +
+    "• *leave*: Leave current game";
+
+  if (isAdmin(state)) {
+    helpMessage +=
+      "\n\n*Admin Commands:*\n" +
+      "• *create_game <game_id> <duration_hours> <max_players>*: Create a new game\n" +
+      "• *delete <player>*: Delete a player\n" +
+      "• *give <player> <amount>*: Give resources to a player\n" +
+      "• *setlevel <player> <level>*: Set a player's level";
+  }
+
+  return formatMessage(helpMessage);
+};
+
 export const handleGameCommand = async (
   playerId: string,
   command: string,
@@ -265,9 +291,7 @@ export const handleGameCommand = async (
   // Match the command using fuzzy search
   const matchedCommand = matchCommand(command.toLowerCase());
   if (!matchedCommand) {
-    return formatMessage(
-      "Unknown command. Type 'help' for available commands."
-    );
+    return handleHelpCommand(playerId);
   }
 
   // Admin commands
@@ -324,7 +348,7 @@ export const handleGameCommand = async (
         return formatMessage(`Set ${levelTarget.name}'s level to ${level}`);
     }
     // Add this line to handle non-admin commands for admin users
-    return formatMessage("Unknown admin command");
+    return handleHelpCommand(playerId);
   }
 
   // Regular game commands
@@ -397,8 +421,6 @@ export const handleGameCommand = async (
       );
 
     default:
-      return formatMessage(
-        "Unknown command. Type 'help' for available commands."
-      );
+      return handleHelpCommand(playerId);
   }
 };
