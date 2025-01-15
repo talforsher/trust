@@ -37,6 +37,8 @@ export default async function handler(
       registered: true,
       isAdmin: true,
       successfulBattles: 0,
+      messageHistory: [],
+      lastMessage: undefined,
     };
 
     await redis.set("player:web-client", initialState);
