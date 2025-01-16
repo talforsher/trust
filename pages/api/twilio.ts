@@ -45,22 +45,10 @@ const formatTwilioResponse = async (text: string) => {
 
   // Updated SVG with web-safe fonts and simplified styling
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">
-    <defs>
-      <style>
-        .message-text {
-          font-family: system-ui, -apple-system, sans-serif;
-          font-size: 24px;
-          fill: white;
-          dominant-baseline: hanging;
-        }
-      </style>
-    </defs>
     <rect width="100%" height="100%" fill="#1a1a1a"/>
-    <foreignObject x="40" y="40" width="720" height="320">
-      <div xmlns="http://www.w3.org/1999/xhtml" style="color: white; font-family: system-ui, -apple-system, sans-serif; font-size: 24px; word-wrap: break-word;">
-        ${escapedText}
-      </div>
-    </foreignObject>
+    <text x="20" y="40" fill="white" font-family="system-ui, -apple-system, sans-serif" font-size="20">
+      <tspan x="20" dy="0">${escapedText}</tspan>
+    </text>
   </svg>`;
 
   try {
