@@ -30,10 +30,10 @@ const validateTwilioRequest = (req: NextApiRequest): boolean => {
  */
 const formatTwilioResponse = (message: string) => {
   const twiml = new twilio.twiml.MessagingResponse();
+  console.log("the twiml", twiml.toString());
+  console.log("the message", message);
   twiml.message(message);
-  twiml.media(
-    "https://res.cloudinary.com/efsi/image/upload/v1736759380/maccabi-shoham/hog6iwxfznfrcpndaj3p.jpg"
-  );
+  console.log("the twiml", twiml.toString());
   return twiml.toString();
 };
 
@@ -52,8 +52,6 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  console.log("req.body", req.body);
-
   // Only allow POST requests
   if (req.method !== "POST") {
     res.setHeader("Allow", ["POST"]);
@@ -75,6 +73,8 @@ export default async function handler(
       console.error("Missing required fields:", { incomingMsg, from });
       return res.status(400).end("Missing required fields");
     }
+
+    console.log("Received message:", incomingMsg, "from:", from);
 
     // Parse command and arguments
     const [command, ...args] = incomingMsg.split(" ");
@@ -125,12 +125,7 @@ export default async function handler(
 
     // Send Twilio response for regular users
     res.setHeader("Content-Type", "text/xml");
-    return res.status(200).send(
-      `<Response>
-        <Message>שולם עלייכם</Message>
-        <Media>https://res.cloudinary.com/efsi/image/upload/v1736759380/maccabi-shoham/hog6iwxfznfrcpndaj3p.jpg</Media>
-      </Response>`
-    );
+    return res.status(200).send(formatTwilioResponse(response));
   } catch (error) {
     console.error("Error processing webhook:", error);
 
