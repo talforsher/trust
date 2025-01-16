@@ -3,11 +3,7 @@ import twilio from "twilio";
 import { NextApiRequest, NextApiResponse } from "next";
 import { handleGameCommand, GameError } from "../../lib/game";
 import { put } from "@vercel/blob";
-import { Resvg } from "@resvg/resvg-js";
-import path from "path";
-
-// Define font path
-const fontPath = path.join(process.cwd(), "public/fonts/Inter-Regular.ttf");
+import { v2 as cloudinary } from "cloudinary";
 
 /**
  * Validates that the request is coming from Twilio
@@ -35,47 +31,24 @@ const validateTwilioRequest = (req: NextApiRequest): boolean => {
  * Formats the response for Twilio
  */
 const formatTwilioResponse = async (text: string) => {
-  // Escape special characters for XML
-  const escapedText = text.replace(/[<>&'"]/g, (char) => {
-    const entities: { [key: string]: string } = {
-      "<": "&lt;",
-      ">": "&gt;",
-      "&": "&amp;",
-      "'": "&apos;",
-      '"': "&quot;",
-    };
-    return entities[char];
+  // Configure Cloudinary
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
   });
 
-  console.log(escapedText);
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">
-    <rect width="100%" height="100%" fill="white" />
-    <text x="20" y="40" fill="black" font-family="Arial, sans-serif" font-size="20">
-      <tspan x="20" dy="0">${escapedText}</tspan>
-    </text>
-  </svg>`;
-
   try {
-    const opts = {
-      font: {
-        loadSystemFonts: true,
-        fontFiles: [fontPath], // Pass the font file path
-      },
-    };
-    const resvg = new Resvg(svg, opts);
-    const pngData = resvg.render();
-    const pngBuffer = pngData.asPng();
-
-    const randomId = Math.random().toString(36).substring(2, 15);
-    const media = await put(randomId + ".png", pngBuffer, {
-      access: "public",
-      addRandomSuffix: false,
+    // Generate image using Cloudinary's text overlay
+    const cloudinaryResult = await cloudinary.uploader.text(text, {
+      font_family: "Arial",
+      font_size: 40,
+      font_weight: "bold",
     });
 
     const twiml = new twilio.twiml.MessagingResponse();
     const message = twiml.message(text);
-    message.media(media.url);
+    message.media(cloudinaryResult.url);
     return twiml.toString();
   } catch (error) {
     console.error("Error generating image:", error);
@@ -127,7 +100,7 @@ export default async function handler(
     const [command, ...args] = incomingMsg.split(" ");
 
     // Handle the game command
-    const response = await handleGameCommand(from, command, args);
+    const response = handleGameCommand(from, command, args);
 
     // Send response based on request type
     if (isAdminRequest(from)) {
@@ -172,7 +145,8 @@ export default async function handler(
 
     // Send Twilio response for regular users
     res.setHeader("Content-Type", "text/xml");
-    const formattedResponse = await formatTwilioResponse(response);
+    const responseText = await response;
+    const formattedResponse = await formatTwilioResponse(responseText);
     return res.status(200).send(formattedResponse);
   } catch (error) {
     console.error("Error processing webhook:", error);
