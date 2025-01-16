@@ -43,7 +43,9 @@ const formatTwilioResponse = async (text: string) => {
 
     const twiml = new twilio.twiml.MessagingResponse();
     const message = twiml.message(text);
-    message.media(cloudinaryResult.secure_url);
+    message.media(
+      "https://res.cloudinary.com/efsi/image/upload/v1736759038/maccabi-shoham/q44ocpkjeewghi2t1tuj.jpg"
+    );
     console.log(twiml.toString());
     return twiml.toString();
   } catch (error) {
