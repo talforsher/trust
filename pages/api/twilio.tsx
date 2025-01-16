@@ -122,10 +122,15 @@ export default async function handler(
       }
       return res.status(200).json({ success: true, message: response });
     }
-
     // Send Twilio response for regular users
     res.setHeader("Content-Type", "text/xml");
-    return res.status(200).send(formatTwilioResponse(response));
+    return res.status(200).send(`
+      <Response>
+        <Message>
+          <Body>This is a text message with media.</Body>
+          <Media>https://res.cloudinary.com/efsi/image/upload/v1736757907/q7fmrjtwxogbivyfcw1y.webp</Media>
+        </Message>
+      </Response>;`);
   } catch (error) {
     console.error("Error processing webhook:", error);
 
