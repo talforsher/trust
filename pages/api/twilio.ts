@@ -43,7 +43,9 @@ const formatTwilioResponse = async (text: string) => {
 
     const twiml = new twilio.twiml.MessagingResponse();
     const message = twiml.message(text);
-    message.media("https://demo.twilio.com/owl.png");
+    message.media(
+      "https://res.cloudinary.com/efsi/image/text/v1737053359/46e4ca28cca0ea4b97f9cfff584b0865.png"
+    );
     console.log(twiml.toString());
     return twiml.toString();
   } catch (error) {
