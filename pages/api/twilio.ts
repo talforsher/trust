@@ -45,16 +45,23 @@ const formatTwilioResponse = async (text: string) => {
 
   // Updated SVG with Google Fonts and simplified styling
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">
-    <defs>
-      <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400&amp;display=swap');
-      </style>
-    </defs>
-    <rect width="100%" height="100%" fill="#1a1a1a"/>
-    <text x="20" y="40" fill="white" font-family="'Roboto', sans-serif" font-size="20">
-      <tspan x="20" dy="0">${escapedText}</tspan>
-    </text>
-  </svg>`;
+  <style>
+    <![CDATA[
+    @font-face {
+      font-family: 'Roboto';
+      src: url('https://fonts.gstatic.com/s/roboto/v29/KFOmCnqEu92Fr1Mu4mxM.woff2') format('woff2');
+    }
+    text {
+      font-family: 'Roboto', sans-serif;
+      fill: white;
+      font-size: 20px;
+    }
+    ]]>
+  </style>
+  <rect width="100%" height="100%" fill="#1a1a1a" />
+  <text x="20" y="40">Hello, World!</text>
+</svg>
+`;
 
   try {
     // Add format configuration to sharp to ensure consistent output
