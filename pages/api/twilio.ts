@@ -39,12 +39,11 @@ const formatTwilioResponse = async (text: string) => {
   });
 
   try {
-    // Generate image using Cloudinary's text overlay
     const cloudinaryResult = await cloudinary.uploader.text(text);
 
     const twiml = new twilio.twiml.MessagingResponse();
     const message = twiml.message(text);
-    message.media(cloudinaryResult.url);
+    message.media("https://demo.twilio.com/owl.png");
     console.log(twiml.toString());
     return twiml.toString();
   } catch (error) {
