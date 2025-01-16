@@ -1,4 +1,6 @@
-import { SUPPORTED_LANGUAGES, type SupportedLanguage } from "./languages";
+import { SUPPORTED_LANGUAGES } from "./languages";
+
+export type SupportedLanguage = keyof typeof SUPPORTED_LANGUAGES;
 
 /**
  * Types of messages that can be translated
@@ -18,7 +20,47 @@ export type TranslationKey =
   | "player_joined" // Player joined notification
   | "player_left" // Player left notification
   | "waiting_for_player" // Waiting for player message
-  | "score_update"; // Score update message
+  | "score_update" // Score update message
+  | "game_status" // Game status header
+  | "game_id" // Game ID label
+  | "players_count" // Players count label
+  | "players_list" // Players list header
+  | "player_level" // Player level label
+  | "no_active_games" // No active games message
+  | "back_to_messages" // Back to messages button
+  | "enter_command" // Enter command placeholder
+  | "unknown_error" // Unknown error message
+  | "register_desc" // Register command description
+  | "join_desc" // Join command description
+  | "attack_desc" // Attack command description
+  | "defend_desc" // Defend command description
+  | "collect_desc" // Collect command description
+  | "alliance_desc" // Alliance command description
+  | "status_desc" // Status command description
+  | "players_desc" // Players command description
+  | "leave_desc" // Leave command description
+  | "create_game_desc" // Create game command description
+  | "delete_desc" // Delete command description
+  | "give_desc" // Give command description
+  | "setlevel_desc" // Set level command description
+  | "not_registered" // Not registered error
+  | "invalid_name" // Invalid name error
+  | "registration_success" // Registration success message
+  | "invalid_game_id" // Invalid game ID error
+  | "game_not_found" // Game not found error
+  | "game_full" // Game full error
+  | "game_joined" // Game joined message
+  | "invalid_target" // Invalid target error
+  | "player_not_found" // Player not found error
+  | "attack_cooldown" // Attack cooldown message
+  | "attack_success" // Attack success message
+  | "collect_cooldown" // Collect cooldown message
+  | "collect_success" // Collect success message
+  | "defend_cooldown" // Defend cooldown message
+  | "defend_success" // Defend success message
+  | "status_message" // Status message
+  | "not_in_game" // Not in game error
+  | "game_left"; // Game left message
 
 /**
  * Available commands in the game
@@ -58,7 +100,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationSet> = {
       welcome: "Welcome to the game!",
       invalid_language: "Invalid language. Please choose from: {languages}",
       language_updated: "Language updated to {language}",
-      help: "Available commands:",
+      help: "Available Commands:",
       unknown_command: "Unknown command: {command}",
       game_started: "Game started! Good luck!",
       game_ended: "Game ended.",
@@ -70,6 +112,50 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationSet> = {
       player_left: "{player} has left the game.",
       waiting_for_player: "Waiting for another player...",
       score_update: "Score: {score}",
+      game_status: "Active Games",
+      game_id: "Game: {id}",
+      players_count: "Players: {current}/{max}",
+      players_list: "Players",
+      player_level: "{name} (Level {level})",
+      no_active_games: "No active games",
+      back_to_messages: "Back to Messages",
+      enter_command: "Enter command...",
+      unknown_error: "An unknown error occurred",
+      register_desc: "Set your player name",
+      join_desc: "Join a game",
+      attack_desc: "Attack another player",
+      defend_desc: "Boost your defense",
+      collect_desc: "Gather resources",
+      alliance_desc: "Propose alliance",
+      status_desc: "Check your status",
+      players_desc: "List all players",
+      leave_desc: "Leave current game",
+      create_game_desc: "Create a new game",
+      delete_desc: "Delete a player",
+      give_desc: "Give resources to a player",
+      setlevel_desc: "Set a player's level",
+      not_registered: "Please register first using 'register <your_name>'",
+      invalid_name: "Please provide a valid name",
+      registration_success:
+        "Welcome {name}! You've been registered successfully",
+      invalid_game_id: "Please provide a valid game ID",
+      game_not_found:
+        "Game not found! Use 'create <name>' to create a new game",
+      game_full: "Game is full!",
+      game_joined: "You've joined game {id}",
+      invalid_target: "Please provide a valid target",
+      player_not_found: "Player {name} not found",
+      attack_cooldown: "Attack on cooldown. {time} seconds remaining",
+      attack_success:
+        "Attack successful! Dealt {damage} damage and stole {coins} coins from {target}",
+      collect_cooldown: "Collection on cooldown. {time} seconds remaining",
+      collect_success: "Collected {amount} coins!",
+      defend_cooldown: "Defense boost on cooldown. {time} seconds remaining",
+      defend_success: "Defense boosted by {amount}! Total defense: {total}",
+      status_message:
+        "Status:\nName: {name}\nGame: {game}\nResources: {resources}\nDefense: {defense}\nAttack: {attack}\nLevel: {level}",
+      not_in_game: "You are not in a game",
+      game_left: "You have left the game",
     },
     commands: {
       help: {
@@ -123,6 +209,52 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationSet> = {
       player_left: "{player} ha dejado el juego.",
       waiting_for_player: "Esperando a otro jugador...",
       score_update: "Puntuación: {score}",
+      game_status: "Juegos Activos",
+      game_id: "Juego: {id}",
+      players_count: "Jugadores: {current}/{max}",
+      players_list: "Jugadores",
+      player_level: "{name} (Nivel {level})",
+      no_active_games: "No hay juegos activos",
+      back_to_messages: "Volver a Mensajes",
+      enter_command: "Ingrese un comando...",
+      unknown_error: "Ocurrió un error desconocido",
+      register_desc: "Establecer tu nombre de jugador",
+      join_desc: "Unirse a un juego",
+      attack_desc: "Atacar a otro jugador",
+      defend_desc: "Aumentar tu defensa",
+      collect_desc: "Recolectar recursos",
+      alliance_desc: "Proponer alianza",
+      status_desc: "Verificar tu estado",
+      players_desc: "Listar todos los jugadores",
+      leave_desc: "Salir del juego actual",
+      create_game_desc: "Crear un nuevo juego",
+      delete_desc: "Eliminar un jugador",
+      give_desc: "Dar recursos a un jugador",
+      setlevel_desc: "Establecer el nivel de un jugador",
+      not_registered:
+        "Por favor regístrate primero usando 'register <tu_nombre>'",
+      invalid_name: "Por favor proporciona un nombre válido",
+      registration_success:
+        "¡Bienvenido {name}! Te has registrado exitosamente",
+      invalid_game_id: "Por favor proporciona un ID de juego válido",
+      game_not_found:
+        "¡Juego no encontrado! Usa 'create <nombre>' para crear uno nuevo",
+      game_full: "¡El juego está lleno!",
+      game_joined: "Te has unido al juego {id}",
+      invalid_target: "Por favor proporciona un objetivo válido",
+      player_not_found: "Jugador {name} no encontrado",
+      attack_cooldown: "Ataque en recarga. {time} segundos restantes",
+      attack_success:
+        "¡Ataque exitoso! Causaste {damage} de daño y robaste {coins} monedas de {target}",
+      collect_cooldown: "Recolección en recarga. {time} segundos restantes",
+      collect_success: "¡Has recolectado {amount} monedas!",
+      defend_cooldown:
+        "Mejora de defensa en recarga. {time} segundos restantes",
+      defend_success: "¡Defensa aumentada en {amount}! Defensa total: {total}",
+      status_message:
+        "Estado:\nNombre: {name}\nJuego: {game}\nRecursos: {resources}\nDefensa: {defense}\nAtaque: {attack}\nNivel: {level}",
+      not_in_game: "No estás en un juego",
+      game_left: "Has dejado el juego",
     },
     commands: {
       help: {
@@ -177,6 +309,50 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationSet> = {
       player_left: "{player} a quitté la partie.",
       waiting_for_player: "En attente d'un autre joueur...",
       score_update: "Score: {score}",
+      game_status: "Jeux Actifs",
+      game_id: "Jeu: {id}",
+      players_count: "Joueurs: {current}/{max}",
+      players_list: "Joueurs",
+      player_level: "{name} (Niveau {level})",
+      no_active_games: "Pas de jeux actifs",
+      back_to_messages: "Retour aux Messages",
+      enter_command: "Entrez une commande...",
+      unknown_error: "An unknown error occurred",
+      register_desc: "Set your player name",
+      join_desc: "Join a game",
+      attack_desc: "Attack another player",
+      defend_desc: "Boost your defense",
+      collect_desc: "Gather resources",
+      alliance_desc: "Propose alliance",
+      status_desc: "Check your status",
+      players_desc: "List all players",
+      leave_desc: "Leave current game",
+      create_game_desc: "Create a new game",
+      delete_desc: "Delete a player",
+      give_desc: "Give resources to a player",
+      setlevel_desc: "Set a player's level",
+      not_registered: "Please register first using 'register <your_name>'",
+      invalid_name: "Please provide a valid name",
+      registration_success:
+        "Welcome {name}! You've been registered successfully",
+      invalid_game_id: "Please provide a valid game ID",
+      game_not_found:
+        "Game not found! Use 'create <name>' to create a new game",
+      game_full: "Game is full!",
+      game_joined: "You've joined game {id}",
+      invalid_target: "Please provide a valid target",
+      player_not_found: "Player {name} not found",
+      attack_cooldown: "Attack on cooldown. {time} seconds remaining",
+      attack_success:
+        "Attack successful! Dealt {damage} damage and stole {coins} coins from {target}",
+      collect_cooldown: "Collection on cooldown. {time} seconds remaining",
+      collect_success: "Collected {amount} coins!",
+      defend_cooldown: "Defense boost on cooldown. {time} seconds remaining",
+      defend_success: "Defense boosted by {amount}! Total defense: {total}",
+      status_message:
+        "Status:\nName: {name}\nGame: {game}\nResources: {resources}\nDefense: {defense}\nAttack: {attack}\nLevel: {level}",
+      not_in_game: "You are not in a game",
+      game_left: "You have left the game",
     },
     commands: {
       help: {
@@ -230,6 +406,50 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationSet> = {
       player_left: "{player} hat das Spiel verlassen.",
       waiting_for_player: "Warten auf einen anderen Spieler...",
       score_update: "Punktestand: {score}",
+      game_status: "Aktive Spiele",
+      game_id: "Spiel: {id}",
+      players_count: "Spieler: {current}/{max}",
+      players_list: "Spieler",
+      player_level: "{name} (Level {level})",
+      no_active_games: "Keine aktiven Spiele",
+      back_to_messages: "Zurück zu Nachrichten",
+      enter_command: "Befehl eingeben...",
+      unknown_error: "An unknown error occurred",
+      register_desc: "Set your player name",
+      join_desc: "Join a game",
+      attack_desc: "Attack another player",
+      defend_desc: "Boost your defense",
+      collect_desc: "Gather resources",
+      alliance_desc: "Propose alliance",
+      status_desc: "Check your status",
+      players_desc: "List all players",
+      leave_desc: "Leave current game",
+      create_game_desc: "Create a new game",
+      delete_desc: "Delete a player",
+      give_desc: "Give resources to a player",
+      setlevel_desc: "Set a player's level",
+      not_registered: "Please register first using 'register <your_name>'",
+      invalid_name: "Please provide a valid name",
+      registration_success:
+        "Welcome {name}! You've been registered successfully",
+      invalid_game_id: "Please provide a valid game ID",
+      game_not_found:
+        "Game not found! Use 'create <name>' to create a new game",
+      game_full: "Game is full!",
+      game_joined: "You've joined game {id}",
+      invalid_target: "Please provide a valid target",
+      player_not_found: "Player {name} not found",
+      attack_cooldown: "Attack on cooldown. {time} seconds remaining",
+      attack_success:
+        "Attack successful! Dealt {damage} damage and stole {coins} coins from {target}",
+      collect_cooldown: "Collection on cooldown. {time} seconds remaining",
+      collect_success: "Collected {amount} coins!",
+      defend_cooldown: "Defense boost on cooldown. {time} seconds remaining",
+      defend_success: "Defense boosted by {amount}! Total defense: {total}",
+      status_message:
+        "Status:\nName: {name}\nGame: {game}\nResources: {resources}\nDefense: {defense}\nAttack: {attack}\nLevel: {level}",
+      not_in_game: "You are not in a game",
+      game_left: "You have left the game",
     },
     commands: {
       help: {
@@ -283,6 +503,50 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationSet> = {
       player_left: "{player} ha lasciato la partita.",
       waiting_for_player: "In attesa di un altro giocatore...",
       score_update: "Punteggio: {score}",
+      game_status: "Giochi Attivi",
+      game_id: "Partita: {id}",
+      players_count: "Giocatori: {current}/{max}",
+      players_list: "Giocatori",
+      player_level: "{name} (Livello {level})",
+      no_active_games: "Nessun gioco attivo",
+      back_to_messages: "Torna ai Messaggi",
+      enter_command: "Inserisci un comando...",
+      unknown_error: "An unknown error occurred",
+      register_desc: "Set your player name",
+      join_desc: "Join a game",
+      attack_desc: "Attack another player",
+      defend_desc: "Boost your defense",
+      collect_desc: "Gather resources",
+      alliance_desc: "Propose alliance",
+      status_desc: "Check your status",
+      players_desc: "List all players",
+      leave_desc: "Leave current game",
+      create_game_desc: "Create a new game",
+      delete_desc: "Delete a player",
+      give_desc: "Give resources to a player",
+      setlevel_desc: "Set a player's level",
+      not_registered: "Please register first using 'register <your_name>'",
+      invalid_name: "Please provide a valid name",
+      registration_success:
+        "Welcome {name}! You've been registered successfully",
+      invalid_game_id: "Please provide a valid game ID",
+      game_not_found:
+        "Game not found! Use 'create <name>' to create a new game",
+      game_full: "Game is full!",
+      game_joined: "You've joined game {id}",
+      invalid_target: "Please provide a valid target",
+      player_not_found: "Player {name} not found",
+      attack_cooldown: "Attack on cooldown. {time} seconds remaining",
+      attack_success:
+        "Attack successful! Dealt {damage} damage and stole {coins} coins from {target}",
+      collect_cooldown: "Collection on cooldown. {time} seconds remaining",
+      collect_success: "Collected {amount} coins!",
+      defend_cooldown: "Defense boost on cooldown. {time} seconds remaining",
+      defend_success: "Defense boosted by {amount}! Total defense: {total}",
+      status_message:
+        "Status:\nName: {name}\nGame: {game}\nResources: {resources}\nDefense: {defense}\nAttack: {attack}\nLevel: {level}",
+      not_in_game: "You are not in a game",
+      game_left: "You have left the game",
     },
     commands: {
       help: {
@@ -336,6 +600,50 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationSet> = {
       player_left: "{player} saiu do jogo.",
       waiting_for_player: "Aguardando outro jogador...",
       score_update: "Pontuação: {score}",
+      game_status: "Jogos Ativos",
+      game_id: "Jogo: {id}",
+      players_count: "Jogadores: {current}/{max}",
+      players_list: "Jogadores",
+      player_level: "{name} (Nível {level})",
+      no_active_games: "Nenhum jogo ativo",
+      back_to_messages: "Voltar para Mensagens",
+      enter_command: "Digite um comando...",
+      unknown_error: "An unknown error occurred",
+      register_desc: "Set your player name",
+      join_desc: "Join a game",
+      attack_desc: "Attack another player",
+      defend_desc: "Boost your defense",
+      collect_desc: "Gather resources",
+      alliance_desc: "Propose alliance",
+      status_desc: "Check your status",
+      players_desc: "List all players",
+      leave_desc: "Leave current game",
+      create_game_desc: "Create a new game",
+      delete_desc: "Delete a player",
+      give_desc: "Give resources to a player",
+      setlevel_desc: "Set a player's level",
+      not_registered: "Please register first using 'register <your_name>'",
+      invalid_name: "Please provide a valid name",
+      registration_success:
+        "Welcome {name}! You've been registered successfully",
+      invalid_game_id: "Please provide a valid game ID",
+      game_not_found:
+        "Game not found! Use 'create <name>' to create a new game",
+      game_full: "Game is full!",
+      game_joined: "You've joined game {id}",
+      invalid_target: "Please provide a valid target",
+      player_not_found: "Player {name} not found",
+      attack_cooldown: "Attack on cooldown. {time} seconds remaining",
+      attack_success:
+        "Attack successful! Dealt {damage} damage and stole {coins} coins from {target}",
+      collect_cooldown: "Collection on cooldown. {time} seconds remaining",
+      collect_success: "Collected {amount} coins!",
+      defend_cooldown: "Defense boost on cooldown. {time} seconds remaining",
+      defend_success: "Defense boosted by {amount}! Total defense: {total}",
+      status_message:
+        "Status:\nName: {name}\nGame: {game}\nResources: {resources}\nDefense: {defense}\nAttack: {attack}\nLevel: {level}",
+      not_in_game: "You are not in a game",
+      game_left: "You have left the game",
     },
     commands: {
       help: {
@@ -389,6 +697,50 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationSet> = {
       player_left: "{player} покинул игру.",
       waiting_for_player: "Ожидание другого игрока...",
       score_update: "Счет: {score}",
+      game_status: "Активные Игры",
+      game_id: "Игра: {id}",
+      players_count: "Игроки: {current}/{max}",
+      players_list: "Игроки",
+      player_level: "{name} (Уровень {level})",
+      no_active_games: "Нет активных игр",
+      back_to_messages: "Вернуться к Сообщениям",
+      enter_command: "Введите команду...",
+      unknown_error: "An unknown error occurred",
+      register_desc: "Set your player name",
+      join_desc: "Join a game",
+      attack_desc: "Attack another player",
+      defend_desc: "Boost your defense",
+      collect_desc: "Gather resources",
+      alliance_desc: "Propose alliance",
+      status_desc: "Check your status",
+      players_desc: "List all players",
+      leave_desc: "Leave current game",
+      create_game_desc: "Create a new game",
+      delete_desc: "Delete a player",
+      give_desc: "Give resources to a player",
+      setlevel_desc: "Set a player's level",
+      not_registered: "Please register first using 'register <your_name>'",
+      invalid_name: "Please provide a valid name",
+      registration_success:
+        "Welcome {name}! You've been registered successfully",
+      invalid_game_id: "Please provide a valid game ID",
+      game_not_found:
+        "Game not found! Use 'create <name>' to create a new game",
+      game_full: "Game is full!",
+      game_joined: "You've joined game {id}",
+      invalid_target: "Please provide a valid target",
+      player_not_found: "Player {name} not found",
+      attack_cooldown: "Attack on cooldown. {time} seconds remaining",
+      attack_success:
+        "Attack successful! Dealt {damage} damage and stole {coins} coins from {target}",
+      collect_cooldown: "Collection on cooldown. {time} seconds remaining",
+      collect_success: "Collected {amount} coins!",
+      defend_cooldown: "Defense boost on cooldown. {time} seconds remaining",
+      defend_success: "Defense boosted by {amount}! Total defense: {total}",
+      status_message:
+        "Status:\nName: {name}\nGame: {game}\nResources: {resources}\nDefense: {defense}\nAttack: {attack}\nLevel: {level}",
+      not_in_game: "You are not in a game",
+      game_left: "You have left the game",
     },
     commands: {
       help: {
@@ -442,6 +794,50 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationSet> = {
       player_left: "{player} 离开了游戏。",
       waiting_for_player: "等待其他玩家...",
       score_update: "分数：{score}",
+      game_status: "活跃游戏",
+      game_id: "游戏：{id}",
+      players_count: "玩家：{current}/{max}",
+      players_list: "玩家",
+      player_level: "{name} (等级 {level})",
+      no_active_games: "没有活跃游戏",
+      back_to_messages: "返回消息",
+      enter_command: "输入命令...",
+      unknown_error: "An unknown error occurred",
+      register_desc: "Set your player name",
+      join_desc: "Join a game",
+      attack_desc: "Attack another player",
+      defend_desc: "Boost your defense",
+      collect_desc: "Gather resources",
+      alliance_desc: "Propose alliance",
+      status_desc: "Check your status",
+      players_desc: "List all players",
+      leave_desc: "Leave current game",
+      create_game_desc: "Create a new game",
+      delete_desc: "Delete a player",
+      give_desc: "Give resources to a player",
+      setlevel_desc: "Set a player's level",
+      not_registered: "Please register first using 'register <your_name>'",
+      invalid_name: "Please provide a valid name",
+      registration_success:
+        "Welcome {name}! You've been registered successfully",
+      invalid_game_id: "Please provide a valid game ID",
+      game_not_found:
+        "Game not found! Use 'create <name>' to create a new game",
+      game_full: "Game is full!",
+      game_joined: "You've joined game {id}",
+      invalid_target: "Please provide a valid target",
+      player_not_found: "Player {name} not found",
+      attack_cooldown: "Attack on cooldown. {time} seconds remaining",
+      attack_success:
+        "Attack successful! Dealt {damage} damage and stole {coins} coins from {target}",
+      collect_cooldown: "Collection on cooldown. {time} seconds remaining",
+      collect_success: "Collected {amount} coins!",
+      defend_cooldown: "Defense boost on cooldown. {time} seconds remaining",
+      defend_success: "Defense boosted by {amount}! Total defense: {total}",
+      status_message:
+        "Status:\nName: {name}\nGame: {game}\nResources: {resources}\nDefense: {defense}\nAttack: {attack}\nLevel: {level}",
+      not_in_game: "You are not in a game",
+      game_left: "You have left the game",
     },
     commands: {
       help: {
@@ -495,6 +891,50 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationSet> = {
       player_left: "{player} が退出しました。",
       waiting_for_player: "他のプレイヤーを待っています...",
       score_update: "スコア：{score}",
+      game_status: "アクティブゲーム",
+      game_id: "ゲーム：{id}",
+      players_count: "プレイヤー：{current}/{max}",
+      players_list: "プレイヤー",
+      player_level: "{name} (レベル {level})",
+      no_active_games: "アクティブゲームなし",
+      back_to_messages: "メッセージに戻る",
+      enter_command: "コマンドを入力...",
+      unknown_error: "An unknown error occurred",
+      register_desc: "Set your player name",
+      join_desc: "Join a game",
+      attack_desc: "Attack another player",
+      defend_desc: "Boost your defense",
+      collect_desc: "Gather resources",
+      alliance_desc: "Propose alliance",
+      status_desc: "Check your status",
+      players_desc: "List all players",
+      leave_desc: "Leave current game",
+      create_game_desc: "Create a new game",
+      delete_desc: "Delete a player",
+      give_desc: "Give resources to a player",
+      setlevel_desc: "Set a player's level",
+      not_registered: "Please register first using 'register <your_name>'",
+      invalid_name: "Please provide a valid name",
+      registration_success:
+        "Welcome {name}! You've been registered successfully",
+      invalid_game_id: "Please provide a valid game ID",
+      game_not_found:
+        "Game not found! Use 'create <name>' to create a new game",
+      game_full: "Game is full!",
+      game_joined: "You've joined game {id}",
+      invalid_target: "Please provide a valid target",
+      player_not_found: "Player {name} not found",
+      attack_cooldown: "Attack on cooldown. {time} seconds remaining",
+      attack_success:
+        "Attack successful! Dealt {damage} damage and stole {coins} coins from {target}",
+      collect_cooldown: "Collection on cooldown. {time} seconds remaining",
+      collect_success: "Collected {amount} coins!",
+      defend_cooldown: "Defense boost on cooldown. {time} seconds remaining",
+      defend_success: "Defense boosted by {amount}! Total defense: {total}",
+      status_message:
+        "Status:\nName: {name}\nGame: {game}\nResources: {resources}\nDefense: {defense}\nAttack: {attack}\nLevel: {level}",
+      not_in_game: "You are not in a game",
+      game_left: "You have left the game",
     },
     commands: {
       help: {
@@ -549,6 +989,50 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationSet> = {
       player_left: "{player}님이 게임을 떠났습니다.",
       waiting_for_player: "다른 플레이어를 기다리는 중...",
       score_update: "점수: {score}",
+      game_status: "진행 중인 게임",
+      game_id: "게임: {id}",
+      players_count: "플레이어: {current}/{max}",
+      players_list: "플레이어",
+      player_level: "{name} (레벨 {level})",
+      no_active_games: "진행 중인 게임 없음",
+      back_to_messages: "메시지로 돌아가기",
+      enter_command: "명령어 입력...",
+      unknown_error: "An unknown error occurred",
+      register_desc: "Set your player name",
+      join_desc: "Join a game",
+      attack_desc: "Attack another player",
+      defend_desc: "Boost your defense",
+      collect_desc: "Gather resources",
+      alliance_desc: "Propose alliance",
+      status_desc: "Check your status",
+      players_desc: "List all players",
+      leave_desc: "Leave current game",
+      create_game_desc: "Create a new game",
+      delete_desc: "Delete a player",
+      give_desc: "Give resources to a player",
+      setlevel_desc: "Set a player's level",
+      not_registered: "Please register first using 'register <your_name>'",
+      invalid_name: "Please provide a valid name",
+      registration_success:
+        "Welcome {name}! You've been registered successfully",
+      invalid_game_id: "Please provide a valid game ID",
+      game_not_found:
+        "Game not found! Use 'create <name>' to create a new game",
+      game_full: "Game is full!",
+      game_joined: "You've joined game {id}",
+      invalid_target: "Please provide a valid target",
+      player_not_found: "Player {name} not found",
+      attack_cooldown: "Attack on cooldown. {time} seconds remaining",
+      attack_success:
+        "Attack successful! Dealt {damage} damage and stole {coins} coins from {target}",
+      collect_cooldown: "Collection on cooldown. {time} seconds remaining",
+      collect_success: "Collected {amount} coins!",
+      defend_cooldown: "Defense boost on cooldown. {time} seconds remaining",
+      defend_success: "Defense boosted by {amount}! Total defense: {total}",
+      status_message:
+        "Status:\nName: {name}\nGame: {game}\nResources: {resources}\nDefense: {defense}\nAttack: {attack}\nLevel: {level}",
+      not_in_game: "You are not in a game",
+      game_left: "You have left the game",
     },
     commands: {
       help: {
@@ -602,6 +1086,50 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationSet> = {
       player_left: ".עזב את המשחק {player}",
       waiting_for_player: "...ממתין לשחקן נוסף",
       score_update: "{score} :ניקוד",
+      game_status: "משחקים פעילים",
+      game_id: "משחק: {id}",
+      players_count: "שחקנים: {current}/{max}",
+      players_list: "שחקנים",
+      player_level: "{name} (רמה {level})",
+      no_active_games: "אין משחקים פעילים",
+      back_to_messages: "חזרה להודעות",
+      enter_command: "הזן פקודה...",
+      unknown_error: "An unknown error occurred",
+      register_desc: "Set your player name",
+      join_desc: "Join a game",
+      attack_desc: "Attack another player",
+      defend_desc: "Boost your defense",
+      collect_desc: "Gather resources",
+      alliance_desc: "Propose alliance",
+      status_desc: "Check your status",
+      players_desc: "List all players",
+      leave_desc: "Leave current game",
+      create_game_desc: "Create a new game",
+      delete_desc: "Delete a player",
+      give_desc: "Give resources to a player",
+      setlevel_desc: "Set a player's level",
+      not_registered: "Please register first using 'register <your_name>'",
+      invalid_name: "Please provide a valid name",
+      registration_success:
+        "Welcome {name}! You've been registered successfully",
+      invalid_game_id: "Please provide a valid game ID",
+      game_not_found:
+        "Game not found! Use 'create <name>' to create a new game",
+      game_full: "Game is full!",
+      game_joined: "You've joined game {id}",
+      invalid_target: "Please provide a valid target",
+      player_not_found: "Player {name} not found",
+      attack_cooldown: "Attack on cooldown. {time} seconds remaining",
+      attack_success:
+        "Attack successful! Dealt {damage} damage and stole {coins} coins from {target}",
+      collect_cooldown: "Collection on cooldown. {time} seconds remaining",
+      collect_success: "Collected {amount} coins!",
+      defend_cooldown: "Defense boost on cooldown. {time} seconds remaining",
+      defend_success: "Defense boosted by {amount}! Total defense: {total}",
+      status_message:
+        "Status:\nName: {name}\nGame: {game}\nResources: {resources}\nDefense: {defense}\nAttack: {attack}\nLevel: {level}",
+      not_in_game: "You are not in a game",
+      game_left: "You have left the game",
     },
     commands: {
       help: {

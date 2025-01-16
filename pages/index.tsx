@@ -2,6 +2,11 @@ import React, { useState } from "react";
 import { Redis } from "@upstash/redis";
 import { PlayerState, COMMANDS, GameData } from "../lib/game";
 import Fuse from "fuse.js";
+import {
+  getMessage,
+  getCommandInfo,
+  type SupportedLanguage,
+} from "../lib/i18n";
 
 type Command = {
   name: string;
@@ -56,6 +61,7 @@ export default function Home({
   const [helpCommands, setHelpCommands] = useState<
     HelpResponse["commands"] | null
   >(null);
+  const [language, setLanguage] = useState<SupportedLanguage>("en");
 
   // Initialize Fuse for command matching
   const commandFuse = new Fuse(Object.values(COMMANDS), {
@@ -79,6 +85,7 @@ export default function Home({
         body: JSON.stringify({
           Body: `${matchedCommand} ${args.join(" ")}`.trim(),
           From: "web-client",
+          Language: language,
         }),
       });
 
@@ -94,7 +101,10 @@ export default function Home({
       setCommand("");
     } catch (error) {
       console.error("Error sending command:", error);
-      setMessages((prev) => [...prev, "Error sending command"]);
+      setMessages((prev) => [
+        ...prev,
+        getMessage(language, "unknown_command", { command }),
+      ]);
     }
   };
 
@@ -103,9 +113,12 @@ export default function Home({
       await fetch("/api/restart", { method: "POST" });
       setMessages([]);
       setGameState(null);
-      setMessages(["Game restarted! Type 'register <n>' to begin."]);
+      setMessages([getMessage(language, "game_started")]);
     } catch (error) {
-      setMessages((prev) => [...prev, "Error restarting game"]);
+      setMessages((prev) => [
+        ...prev,
+        getMessage(language, "unknown_command", { command: "restart" }),
+      ]);
     }
   };
 
@@ -117,29 +130,44 @@ export default function Home({
             <div className="divide-y divide-gray-200">
               {/* Active Games Section */}
               <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
-                <h2 className="text-xl font-bold mb-4">Active Games</h2>
+                <h2 className="text-xl font-bold mb-4">
+                  {getMessage(language, "game_status")}
+                </h2>
                 <div className="space-y-4">
                   {games
                     .filter((game) => game && game.config && game.players)
                     .map((game, index) => (
                       <div key={index} className="bg-gray-50 p-4 rounded-lg">
                         <h3 className="font-semibold">
-                          Game: {game.config.id}
+                          {getMessage(language, "game_id", {
+                            id: game.config.id,
+                          })}
                         </h3>
                         <div className="text-sm">
                           <p>
-                            Players: {Object.keys(game.players).length}/
-                            {game.config.maxPlayers}
+                            {getMessage(language, "players_count", {
+                              current: String(Object.keys(game.players).length),
+                              max: String(game.config.maxPlayers),
+                            })}
                           </p>
-                          <p>Status: {game.status}</p>
+                          <p>
+                            {getMessage(language, "game_status", {
+                              status: game.status,
+                            })}
+                          </p>
                           <div className="mt-2">
-                            <h4 className="font-medium">Players:</h4>
+                            <h4 className="font-medium">
+                              {getMessage(language, "players_list")}:
+                            </h4>
                             <ul className="list-disc pl-5">
                               {Object.values(game.players)
                                 .filter((player) => player && player.name)
                                 .map((player, pIndex) => (
                                   <li key={pIndex}>
-                                    {player.name} (Level {player.level})
+                                    {getMessage(language, "player_level", {
+                                      name: player.name,
+                                      level: String(player.level),
+                                    })}
                                   </li>
                                 ))}
                             </ul>
@@ -148,7 +176,9 @@ export default function Home({
                       </div>
                     ))}
                   {games.length === 0 && (
-                    <p className="text-gray-500 italic">No active games</p>
+                    <p className="text-gray-500 italic">
+                      {getMessage(language, "no_active_games")}
+                    </p>
                   )}
                 </div>
               </div>
@@ -159,7 +189,7 @@ export default function Home({
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-lg font-bold mb-2">
-                        Available Commands:
+                        {getMessage(language, "help")}
                       </h3>
                       <ul className="list-disc pl-5 space-y-2">
                         {helpCommands.regular.map((cmd, i) => (
@@ -176,7 +206,7 @@ export default function Home({
                       onClick={() => setHelpCommands(null)}
                       className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                     >
-                      Back to Messages
+                      {getMessage(language, "back_to_messages")}
                     </button>
                   </div>
                 ) : (
@@ -194,7 +224,7 @@ export default function Home({
                         value={command}
                         onChange={(e) => setCommand(e.target.value)}
                         onKeyPress={(e) => e.key === "Enter" && handleCommand()}
-                        placeholder="Enter command..."
+                        placeholder={getMessage(language, "enter_command")}
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>

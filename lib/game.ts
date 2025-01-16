@@ -6,6 +6,7 @@ import {
   getAvailableLanguages,
   SupportedLanguage,
 } from "./languages";
+import { getMessage, formatHelpMessage } from "./i18n";
 
 const redis = Redis.fromEnv();
 
@@ -36,6 +37,7 @@ export const COMMANDS = {
   LEAVE: "leave",
   HISTORY: "history",
   CONFIG: "config",
+  LANGUAGE: "language",
 } as const;
 
 export type GameCommand = keyof typeof COMMANDS;
@@ -343,262 +345,149 @@ export const handleGameCommand = async (
   args: string[]
 ): Promise<string> => {
   const state = await getPlayerState(playerId);
+  const language = state.language as SupportedLanguage;
   const now = Math.floor(Date.now() / 1000);
-  const players = await getAllPlayers();
 
-  // Handle "." command to repeat last message
-  if (command === ".") {
-    if (!state.lastMessage) {
-      return formatMessage("No previous command to repeat!");
+  // Handle language change command first
+  if (command.toLowerCase() === COMMANDS.LANGUAGE) {
+    if (args.length !== 1) {
+      return getMessage(language, "invalid_language", {
+        languages: getAvailableLanguages(),
+      });
     }
-    const [lastCommand, ...lastArgs] = state.lastMessage.split(" ");
-    return handleGameCommand(playerId, lastCommand, lastArgs);
-  }
-
-  // Store the command in message history
-  const fullCommand = [command, ...args].join(" ");
-  updateMessageHistory(state, fullCommand);
-  await savePlayerState(playerId, state);
-
-  // Check for recovery boost
-  await checkAndApplyRecovery(state);
-
-  // Match the command using fuzzy search
-  const matchedCommand = matchCommand(command.toLowerCase());
-  if (!matchedCommand) {
-    return handleHelpCommand();
-  }
-
-  // Add message history command
-  if (matchedCommand === "history") {
-    if (state.messageHistory.length === 0) {
-      return formatMessage("No command history available.");
+    const newLang = args[0].toLowerCase();
+    if (!isValidLanguage(newLang)) {
+      return getMessage(language, "invalid_language", {
+        languages: getAvailableLanguages(),
+      });
     }
-    const history = state.messageHistory
-      .map((msg, i) => `${i + 1}. ${msg}`)
-      .join("\n");
-    return formatMessage(
-      `Your last ${state.messageHistory.length} commands:\n${history}`
-    );
+    state.language = newLang;
+    await savePlayerState(playerId, state);
+    return getMessage(newLang as SupportedLanguage, "language_updated", {
+      language: newLang,
+    });
   }
 
-  // Regular game commands
-  switch (matchedCommand) {
-    case COMMANDS.ATTACK:
-      if (!state.registered || !state.gameId)
-        return formatMessage("Please join a game first!");
-      if (args.length === 0)
-        return formatMessage("Please provide a player to attack!");
-      const targetPlayer = await findPlayerByName(args[0]);
-      if (!targetPlayer)
-        return formatMessage("Player not found! Please try again.");
-      const { damage, stolenCoins } = calculateDamage(state, targetPlayer);
-      state.resources += stolenCoins;
-      targetPlayer.resources -= damage;
-      await savePlayerState(playerId, state);
-      await savePlayerState(targetPlayer.id, targetPlayer);
-      return formatMessage(`*Attack successful!* ${damage} coins stolen.`);
+  // Handle help command
+  if (command.toLowerCase() === COMMANDS.HELP) {
+    return formatHelpMessage(language);
+  }
 
-    case COMMANDS.REGISTER:
-      if (state.registered) return formatMessage("You are already registered!");
-      if (args.length === 0) return formatMessage("Please provide your name!");
-      state.name = args.join(" ");
-      state.registered = true;
-      await savePlayerState(playerId, state);
-      return formatMessage(
-        `*Welcome ${state.name}!* You've been registered successfully. Type 'join <game_id>' to join a game!`
-      );
+  // Handle registration
+  if (!state.registered && command.toLowerCase() !== COMMANDS.REGISTER) {
+    return getMessage(language, "not_registered");
+  }
 
-    case COMMANDS.CREATE:
-      if (!state.registered)
-        return formatMessage(
-          "Please register first using 'register <your_name>'"
-        );
-      if (args.length === 0)
-        return formatMessage("Please provide a name for the game!");
+  // Handle registration command
+  if (command.toLowerCase() === COMMANDS.REGISTER) {
+    if (args.length !== 1) {
+      return getMessage(language, "invalid_name");
+    }
+    state.name = args[0];
+    state.registered = true;
+    await savePlayerState(playerId, state);
+    return getMessage(language, "registration_success", { name: state.name });
+  }
 
-      const gameName = args.join(" ");
-      const newGameId = generateGameId();
-      const newGameData: GameData = {
-        config: {
-          id: newGameId,
-          name: gameName,
-          duration: 24 * 3600, // 24 hours
-          maxPlayers: 10,
-          startingResources: GAME_CONSTANTS.DEFAULT_STARTING_RESOURCES,
-          startingDefense: GAME_CONSTANTS.DEFAULT_DEFENSE_POINTS,
-          startingAttack: GAME_CONSTANTS.DEFAULT_ATTACK_POWER,
-          createdAt: now,
-          hostId: playerId,
-        },
-        players: {},
-        status: "active",
-      };
-
-      // Set up the player's state for the new game
-      state.gameId = newGameId;
-      state.resources = newGameData.config.startingResources;
-      state.defensePoints = newGameData.config.startingDefense;
-      state.attackPower = newGameData.config.startingAttack;
-
-      // Add player to game data
-      newGameData.players[playerId] = state;
-
-      // Save the new game
-      await saveGameData(newGameId, newGameData);
-
-      return formatMessage(
-        `*Game Created!*\nGame '${gameName}' created with ID: ${newGameId}\n\n` +
-          "🎮 *Available Commands:*\n" +
-          "• *attack <player>*: Attack another player\n" +
-          "• *defend*: Boost your defense\n" +
-          "• *collect*: Gather resources\n" +
-          "• *alliance <player>*: Propose alliance\n" +
-          "• *status*: Check your status\n" +
-          "• *players*: List all players\n" +
-          "• *leave*: Leave the game"
-      );
-
+  // Handle game commands
+  switch (command.toLowerCase()) {
     case COMMANDS.JOIN:
-      if (!state.registered)
-        return formatMessage(
-          "Please register first using 'register <your_name>'"
-        );
-      if (args.length === 0)
-        return formatMessage("Please provide a game ID to join!");
-
+      if (args.length !== 1) {
+        return getMessage(language, "invalid_game_id");
+      }
       const gameId = args[0];
-      const gameData = await getGameData(gameId);
-
-      if (!gameData) {
-        return formatMessage(
-          "Game not found! Use 'create <name>' to create a new game."
-        );
+      const game = await getGameData(gameId);
+      if (!game) {
+        return getMessage(language, "game_not_found");
       }
-
-      // Ensure players object exists
-      if (!gameData.players) {
-        gameData.players = {};
+      if (Object.keys(game.players).length >= game.config.maxPlayers) {
+        return getMessage(language, "game_full");
       }
-
-      const gamePlayers = Object.values(gameData.players);
-      if (gamePlayers.length >= gameData.config.maxPlayers)
-        return formatMessage("Game is full!");
-
+      game.players[playerId] = state;
       state.gameId = gameId;
-      state.resources = gameData.config.startingResources;
-      state.defensePoints = gameData.config.startingDefense;
-      state.attackPower = gameData.config.startingAttack;
-
-      // Add player to game data
-      gameData.players[playerId] = state;
-      await saveGameData(gameId, gameData);
-
-      return formatMessage(
-        `*Welcome to ${gameData.config.name}!*\n\n` +
-          "🎮 *Available Commands:*\n" +
-          "• *attack <player>*: Attack another player\n" +
-          "• *defend*: Boost your defense\n" +
-          "• *collect*: Gather resources\n" +
-          "• *alliance <player>*: Propose alliance\n" +
-          "• *status*: Check your status\n" +
-          "• *players*: List all players\n" +
-          "• *leave*: Leave the game"
-      );
-
-    case COMMANDS.DEFEND:
-      if (!state.registered || !state.gameId)
-        return formatMessage("Please join a game first!");
-      if (now - state.lastDefense < COOLDOWNS.DEFENSE) {
-        return formatMessage(
-          `⏳ Defense Cooldown: ${
-            COOLDOWNS.DEFENSE - (now - state.lastDefense)
-          } seconds remaining`
-        );
-      }
-
-      const defenseBoost = Math.floor(state.level * 5);
-      state.defensePoints += defenseBoost;
-      state.lastDefense = now;
+      await saveGameData(gameId, game);
       await savePlayerState(playerId, state);
+      return getMessage(language, "game_joined", { id: gameId });
 
-      return formatMessage(
-        `🛡️ *Defense Boosted!*\n` +
-          `• Boost amount: ${defenseBoost}\n` +
-          `• Total defense: ${state.defensePoints}`
-      );
-
-    case COMMANDS.LIST_PLAYERS:
-      const playerList = players.map((p) => `• ${p.name}`).join("\n");
-      return formatMessage(`*Players in the game:*\n${playerList}`);
+    case COMMANDS.ATTACK:
+      if (args.length !== 1) {
+        return getMessage(language, "invalid_target");
+      }
+      const targetName = args[0];
+      const target = await findPlayerByName(targetName);
+      if (!target) {
+        return getMessage(language, "player_not_found", { name: targetName });
+      }
+      if (now - state.lastAttack < COOLDOWNS.ATTACK) {
+        const remaining = COOLDOWNS.ATTACK - (now - state.lastAttack);
+        return getMessage(language, "attack_cooldown", {
+          time: String(remaining),
+        });
+      }
+      const { damage, stolenCoins } = calculateDamage(state, target);
+      target.resources = Math.max(0, target.resources - stolenCoins);
+      state.resources += stolenCoins;
+      state.lastAttack = now;
+      state.successfulBattles++;
+      await savePlayerState(target.id, target);
+      await savePlayerState(playerId, state);
+      return getMessage(language, "attack_success", {
+        target: target.name,
+        damage: String(damage),
+        coins: String(stolenCoins),
+      });
 
     case COMMANDS.COLLECT:
-      if (!state.registered || !state.gameId)
-        return formatMessage("Please join a game first!");
+      if (now - state.lastCollect < COOLDOWNS.COLLECT) {
+        const remaining = COOLDOWNS.COLLECT - (now - state.lastCollect);
+        return getMessage(language, "collect_cooldown", {
+          time: String(remaining),
+        });
+      }
       const collectionAmount = calculateCollection(state);
       state.resources += collectionAmount;
       state.lastCollect = now;
       await savePlayerState(playerId, state);
-      return formatMessage(`*Collected ${collectionAmount} coins!*`);
+      return getMessage(language, "collect_success", {
+        amount: String(collectionAmount),
+      });
 
-    case COMMANDS.ALLIANCE:
-      if (!state.registered || !state.gameId)
-        return formatMessage("Please join a game first!");
-      if (args.length === 0)
-        return formatMessage("Please provide a player to propose alliance!");
-      const allianceTarget = await findPlayerByName(args[0]);
-      if (!allianceTarget)
-        return formatMessage("Player not found! Please try again.");
-
-      state.pendingAlliances.push(allianceTarget.id);
+    case COMMANDS.DEFEND:
+      if (now - state.lastDefense < COOLDOWNS.DEFENSE) {
+        const remaining = COOLDOWNS.DEFENSE - (now - state.lastDefense);
+        return getMessage(language, "defend_cooldown", {
+          time: String(remaining),
+        });
+      }
+      const defenseBoost = Math.floor(state.level * 5);
+      state.defensePoints += defenseBoost;
+      state.lastDefense = now;
       await savePlayerState(playerId, state);
-      return formatMessage(
-        `*Alliance proposal sent to ${allianceTarget.name}!*`
-      );
+      return getMessage(language, "defend_success", {
+        amount: String(defenseBoost),
+        total: String(state.defensePoints),
+      });
 
     case COMMANDS.STATUS:
-      return formatMessage(
-        `*Status:*\n` +
-          `• Name: ${state.name}\n` +
-          `• Game ID: ${state.gameId}\n` +
-          `• Resources: ${state.resources}\n` +
-          `• Defense: ${state.defensePoints}\n` +
-          `• Attack: ${state.attackPower}\n` +
-          `• Level: ${state.level}`
-      );
+      return getMessage(language, "status_message", {
+        name: state.name,
+        game: state.gameId || "None",
+        resources: String(state.resources),
+        defense: String(state.defensePoints),
+        attack: String(state.attackPower),
+        level: String(state.level),
+      });
 
     case COMMANDS.LEAVE:
-      if (!state.registered || !state.gameId)
-        return formatMessage("Please join a game first!");
+      if (!state.gameId) {
+        return getMessage(language, "not_in_game");
+      }
       state.gameId = "";
       await savePlayerState(playerId, state);
-      return formatMessage("*You have left the game.*");
-
-    case COMMANDS.CONFIG:
-      if (args.length < 2 || args[0] !== "lang") {
-        return formatMessage(configInstructions());
-      }
-      const newLang = args[1].toLowerCase();
-      if (!isValidLanguage(newLang)) {
-        return formatMessage(
-          getTranslation("en", "invalid_language", {
-            languages: getAvailableLanguages(),
-          })
-        );
-      }
-      state.language = newLang;
-      await savePlayerState(playerId, state);
-      return formatMessage(
-        getTranslation(newLang as SupportedLanguage, "language_updated", {
-          language: newLang,
-        })
-      );
-
-    case COMMANDS.HELP:
-      return handleHelpCommand();
+      return getMessage(language, "game_left");
 
     default:
-      return handleHelpCommand();
+      return getMessage(language, "unknown_command", { command });
   }
 };
 
