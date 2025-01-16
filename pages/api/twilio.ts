@@ -47,6 +47,7 @@ const formatTwilioResponse = async (text: string) => {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">
     <rect width="100%" height="100%" fill="#1a1a1a"/>
     <text x="20" y="40" fill="white" font-family="Arial, sans-serif" font-size="20">
+      <tspan x="20" dy="0">${escapedText}</tspan>
     </text>
   </svg>`;
 
@@ -61,7 +62,6 @@ const formatTwilioResponse = async (text: string) => {
     const twiml = new twilio.twiml.MessagingResponse();
     const message = twiml.message(text);
     message.media(media.url);
-    console.log(media.url);
     return twiml.toString();
   } catch (error) {
     console.error("Error generating image:", error);
@@ -102,6 +102,9 @@ export default async function handler(
 
     const incomingMsg = req.body.Body?.trim();
     const from = req.body.From;
+
+    console.log("incomingMsg from", from);
+    console.log("incomingMsg", incomingMsg);
 
     // Validate required fields
     if (!incomingMsg || !from) {
