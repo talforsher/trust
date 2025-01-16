@@ -60,6 +60,7 @@ export default async function handler(
   }
 
   try {
+    console.log("req.body", req.headers);
     // Validate Twilio request
     // if (!validateTwilioRequest(req)) {
     //   console.error("Invalid Twilio signature");
