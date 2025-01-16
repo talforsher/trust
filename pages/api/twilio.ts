@@ -34,7 +34,7 @@ const formatTwilioResponse = async (text: string) => {
   try {
     const twiml = new twilio.twiml.MessagingResponse();
     const message = twiml.message(text);
-    const decodedText = decodeURIComponent("text text");
+    const decodedText = encodeURIComponent("text text");
     message.media(
       `https://res.cloudinary.com/efsi/image/upload/b_gray,co_rgb:FFFFFF,l_text:Arial_100:${decodedText},r_10,o_76,g_south,y_40/xrjx758eqm8zb9ctuet1.jpg`
     );
