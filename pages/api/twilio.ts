@@ -2,7 +2,6 @@
 import twilio from "twilio";
 import { NextApiRequest, NextApiResponse } from "next";
 import { handleGameCommand, GameError } from "../../lib/game";
-import { put } from "@vercel/blob";
 import { v2 as cloudinary } from "cloudinary";
 
 /**
@@ -44,7 +43,7 @@ const formatTwilioResponse = async (text: string) => {
     const twiml = new twilio.twiml.MessagingResponse();
     const message = twiml.message(text);
     message.media(
-      "https://res.cloudinary.com/efsi/image/upload/v1736759038/maccabi-shoham/q44ocpkjeewghi2t1tuj.jpg"
+      "https://res.cloudinary.com/efsi/image/upload/v1734607400/ftjuhyuqz1gnybipag50.png"
     );
     console.log(twiml.toString());
     return twiml.toString();
