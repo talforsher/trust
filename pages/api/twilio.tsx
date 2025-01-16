@@ -34,7 +34,6 @@ const formatTwilioResponse = (message: string) => {
   twiml.media(
     "https://res.cloudinary.com/efsi/image/upload/v1736759380/maccabi-shoham/hog6iwxfznfrcpndaj3p.jpg"
   );
-  console.log(twiml.toString());
   return twiml.toString();
 };
 
@@ -53,6 +52,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  console.log("req.body", req.body);
+
   // Only allow POST requests
   if (req.method !== "POST") {
     res.setHeader("Allow", ["POST"]);
@@ -60,7 +61,6 @@ export default async function handler(
   }
 
   try {
-    console.log("req.body", req.headers);
     // Validate Twilio request
     // if (!validateTwilioRequest(req)) {
     //   console.error("Invalid Twilio signature");
@@ -75,8 +75,6 @@ export default async function handler(
       console.error("Missing required fields:", { incomingMsg, from });
       return res.status(400).end("Missing required fields");
     }
-
-    console.log("Received message:", incomingMsg, "from:", from);
 
     // Parse command and arguments
     const [command, ...args] = incomingMsg.split(" ");
