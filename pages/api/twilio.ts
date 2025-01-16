@@ -4,6 +4,10 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { handleGameCommand, GameError } from "../../lib/game";
 import { put } from "@vercel/blob";
 import { Resvg } from "@resvg/resvg-js";
+import path from "path";
+
+// Define font path
+const fontPath = path.join(process.cwd(), "public/fonts/Inter-Regular.ttf");
 
 /**
  * Validates that the request is coming from Twilio
@@ -47,13 +51,19 @@ const formatTwilioResponse = async (text: string) => {
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">
     <rect width="100%" height="100%" fill="white" />
-    <text x="20" y="40" fill="black" font-size="20">
+    <text x="20" y="40" fill="black" font-family="Arial, sans-serif" font-size="20">
       <tspan x="20" dy="0">${escapedText}</tspan>
     </text>
   </svg>`;
 
   try {
-    const resvg = new Resvg(svg);
+    const opts = {
+      font: {
+        loadSystemFonts: true,
+        fontFiles: [fontPath], // Pass the font file path
+      },
+    };
+    const resvg = new Resvg(svg, opts);
     const pngData = resvg.render();
     const pngBuffer = pngData.asPng();
 
