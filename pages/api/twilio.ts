@@ -43,10 +43,15 @@ const formatTwilioResponse = async (text: string) => {
     return entities[char];
   });
 
-  // Updated SVG with web-safe fonts and simplified styling
+  // Updated SVG with Google Fonts and simplified styling
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">
+    <defs>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400&amp;display=swap');
+      </style>
+    </defs>
     <rect width="100%" height="100%" fill="#1a1a1a"/>
-    <text x="20" y="40" fill="white" font-size="20">
+    <text x="20" y="40" fill="white" font-family="'Roboto', sans-serif" font-size="20">
       <tspan x="20" dy="0">${escapedText}</tspan>
     </text>
   </svg>`;
