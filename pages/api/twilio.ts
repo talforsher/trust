@@ -1,63 +1,28 @@
 // twilio webhook
+import type { NextApiRequest, NextApiResponse } from "next";
 import twilio from "twilio";
-import { NextApiRequest, NextApiResponse } from "next";
 import { handleGameCommand, GameError } from "../../lib/game";
+import { getMessage, type SupportedLanguage } from "../../lib/i18n";
 
 /**
- * Validates that the request is coming from Twilio
+ * Format a response for Twilio
+ * @param message The message to format
+ * @returns TwiML response
  */
-const validateTwilioRequest = (req: NextApiRequest): boolean => {
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  if (!authToken) return false;
-
-  const twilioSignature = req.headers["x-twilio-signature"];
-  if (!twilioSignature) return false;
-
-  const url = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}/api/twilio`
-    : `${req.headers["x-forwarded-proto"]}://${req.headers.host}/api/twilio`;
-
-  return twilio.validateRequest(
-    authToken,
-    twilioSignature as string,
-    url,
-    req.body
-  );
-};
+function formatTwilioResponse(message: string): string {
+  const twiml = new twilio.twiml.MessagingResponse();
+  twiml.message(message);
+  return twiml.toString();
+}
 
 /**
- * Formats the response for Twilio
+ * Check if a request is from an admin client
+ * @param from The sender identifier
+ * @returns Whether the sender is an admin
  */
-const formatTwilioResponse = async (text: string) => {
-  // Configure Cloudinary
-
-  try {
-    const twiml = new twilio.twiml.MessagingResponse();
-    const message = twiml.message(text);
-    const encodedText = encodeURIComponent(text);
-
-    const fontSize = Math.max(40, 170 - text.length);
-
-    message.media(
-      `https://res.cloudinary.com/efsi/image/upload/b_gray,co_rgb:FFFFFF,l_text:Arial_${fontSize}:${encodedText},r_10,o_76,g_south,y_40/xrjx758eqm8zb9ctuet1.jpg`
-    );
-    console.log(twiml.toString());
-    return twiml.toString();
-  } catch (error) {
-    console.error("Error generating image:", error);
-    // Fallback to text-only response if image generation fails
-    const twiml = new twilio.twiml.MessagingResponse();
-    twiml.message(text);
-    return twiml.toString();
-  }
-};
-
-/**
- * Checks if the request is from an admin
- */
-const isAdminRequest = (from: string): boolean => {
+function isAdminRequest(from: string): boolean {
   return from === "web-client";
-};
+}
 
 /**
  * Twilio webhook handler
@@ -81,8 +46,8 @@ export default async function handler(
     // }
 
     const incomingMsg = req.body.Body?.trim();
-    console.log(req.body);
     const from = req.body.From;
+    const language = (req.body.Language || "en") as SupportedLanguage;
 
     // Validate required fields
     if (!incomingMsg || !from) {
@@ -102,29 +67,56 @@ export default async function handler(
       if (command.toLowerCase() === "help" || !command) {
         const commands = {
           regular: [
-            { name: "register <name>", description: "Set your player name" },
-            { name: "join <game_id>", description: "Join a game" },
-            { name: "attack <player>", description: "Attack another player" },
-            { name: "defend", description: "Boost your defense" },
-            { name: "collect", description: "Gather resources" },
-            { name: "alliance <player>", description: "Propose alliance" },
-            { name: "status", description: "Check your status" },
-            { name: "players", description: "List all players" },
-            { name: "leave", description: "Leave current game" },
+            {
+              name: "register <n>",
+              description: getMessage(language, "register_desc"),
+            },
+            {
+              name: "join <game_id>",
+              description: getMessage(language, "join_desc"),
+            },
+            {
+              name: "attack <player>",
+              description: getMessage(language, "attack_desc"),
+            },
+            {
+              name: "defend",
+              description: getMessage(language, "defend_desc"),
+            },
+            {
+              name: "collect",
+              description: getMessage(language, "collect_desc"),
+            },
+            {
+              name: "alliance <player>",
+              description: getMessage(language, "alliance_desc"),
+            },
+            {
+              name: "status",
+              description: getMessage(language, "status_desc"),
+            },
+            {
+              name: "players",
+              description: getMessage(language, "players_desc"),
+            },
+            { name: "leave", description: getMessage(language, "leave_desc") },
           ],
           admin: [
             {
               name: "create_game <game_id> <duration_hours> <max_players>",
-              description: "Create a new game",
+              description: getMessage(language, "create_game_desc"),
             },
-            { name: "delete <player>", description: "Delete a player" },
+            {
+              name: "delete <player>",
+              description: getMessage(language, "delete_desc"),
+            },
             {
               name: "give <player> <amount>",
-              description: "Give resources to a player",
+              description: getMessage(language, "give_desc"),
             },
             {
               name: "setlevel <player> <level>",
-              description: "Set a player's level",
+              description: getMessage(language, "setlevel_desc"),
             },
           ],
         };
@@ -158,12 +150,13 @@ export default async function handler(
         .send(formatTwilioResponse(`Error: ${error.message}`));
     }
 
+    const language = (req.body.Language || "en") as SupportedLanguage;
     if (isAdminRequest(req.body.From)) {
       return res.status(500).json({
         success: false,
-        error: "Internal Server Error",
+        error: getMessage(language, "unknown_error"),
       });
     }
-    return res.status(500).end("Internal Server Error");
+    return res.status(500).end(getMessage(language, "unknown_error"));
   }
 }
