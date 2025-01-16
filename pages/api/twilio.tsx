@@ -30,6 +30,11 @@ const validateTwilioRequest = (req: NextApiRequest): boolean => {
  * Formats the response for Twilio
  */
 const formatTwilioResponse = (text: string, image?: string) => {
+  cloudinary.config({
+    cloud_name: "efsi",
+    api_key: "712334865821159",
+    api_secret: "FN1bLewAVteXDTswRT3C-77-v7U",
+  });
   const cloudinaryUrl = "https://res.cloudinary.com/efsi/image/upload/";
   const url = Math.random().toString(36).substring(2, 15);
   const imageUrl = `${cloudinaryUrl}/${url}.svg`;
