@@ -1,5 +1,5 @@
 // twilio webhook
-import twilio, { twiml } from "twilio";
+import twilio from "twilio";
 import { NextApiRequest, NextApiResponse } from "next";
 import { handleGameCommand, GameError } from "../../lib/game";
 import { v2 as cloudinary } from "cloudinary";
@@ -41,7 +41,7 @@ const formatTwilioResponse = async (text: string, image?: string) => {
 
   const url = Math.random().toString(36).substring(2, 15);
   const tempFilePath = join(tmpdir(), `${url}.svg`);
-  const expectedUrl = `https://res.cloudinary.com/efsi/image/upload/${url}.png`;
+  const expectedUrl = `https://res.cloudinary.com/efsi/image/upload/v1737034124/test/${url}.png`;
 
   // Create SVG with text wrapped in foreignObject to handle multiline text
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">
@@ -59,6 +59,8 @@ const formatTwilioResponse = async (text: string, image?: string) => {
     .upload(tempFilePath, {
       public_id: url,
       format: "png",
+      folder: "test",
+      overwrite: true,
     })
     .catch((error) => {
       console.error("Error uploading to Cloudinary:", error);
