@@ -103,9 +103,6 @@ export default async function handler(
     const incomingMsg = req.body.Body?.trim();
     const from = req.body.From;
 
-    console.log("incomingMsg from", from);
-    console.log("incomingMsg", incomingMsg);
-
     // Validate required fields
     if (!incomingMsg || !from) {
       console.error("Missing required fields:", { incomingMsg, from });
@@ -161,7 +158,8 @@ export default async function handler(
 
     // Send Twilio response for regular users
     res.setHeader("Content-Type", "text/xml");
-    return res.status(200).send(formatTwilioResponse(response));
+    const formattedResponse = await formatTwilioResponse(response);
+    return res.status(200).send(formattedResponse);
   } catch (error) {
     console.error("Error processing webhook:", error);
 
