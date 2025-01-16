@@ -49,6 +49,7 @@ const formatTwilioResponse = async (text: string) => {
     const twiml = new twilio.twiml.MessagingResponse();
     const message = twiml.message(text);
     message.media(cloudinaryResult.url);
+    console.log(twiml.toString());
     return twiml.toString();
   } catch (error) {
     console.error("Error generating image:", error);
