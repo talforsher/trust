@@ -2,10 +2,8 @@
 import twilio from "twilio";
 import { NextApiRequest, NextApiResponse } from "next";
 import { handleGameCommand, GameError } from "../../lib/game";
-import { v2 as cloudinary } from "cloudinary";
-import { writeFileSync } from "fs";
-import { tmpdir } from "os";
-import { join } from "path";
+import { put } from "@vercel/blob";
+import sharp from "sharp";
 
 /**
  * Validates that the request is coming from Twilio
@@ -32,47 +30,47 @@ const validateTwilioRequest = (req: NextApiRequest): boolean => {
 /**
  * Formats the response for Twilio
  */
-const formatTwilioResponse = async (text: string, image?: string) => {
-  cloudinary.config({
-    cloud_name: "efsi",
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+const formatTwilioResponse = async (text: string) => {
+  // Escape special characters for XML
+  const escapedText = text.replace(/[<>&'"]/g, (char) => {
+    const entities: { [key: string]: string } = {
+      "<": "&lt;",
+      ">": "&gt;",
+      "&": "&amp;",
+      "'": "&apos;",
+      '"': "&quot;",
+    };
+    return entities[char];
   });
 
-  const url = Math.random().toString(36).substring(2, 15);
-  const tempFilePath = join(tmpdir(), `${url}.svg`);
-
-  const expectedUrl = `https://res.cloudinary.com/efsi/image/upload/test/${url}.png`;
-
-  // Create SVG with text wrapped in foreignObject to handle multiline text
+  // Alternative approach using basic SVG text elements
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">
     <rect width="100%" height="100%" fill="#1a1a1a"/>
-    <foreignObject x="20" y="20" width="760" height="360">
-      <div xmlns="http://www.w3.org/1999/xhtml" style="color: white; font-family: Arial, sans-serif; font-size: 20px; white-space: pre-wrap;">${text}</div>
-    </foreignObject>
+    <text x="20" y="40" fill="white" font-family="Arial, sans-serif" font-size="20">
+      <tspan x="20" dy="0">${escapedText}</tspan>
+    </text>
   </svg>`;
 
-  // Write SVG to temp file
-  writeFileSync(tempFilePath, svg);
-
-  // Start upload in background
-  cloudinary.uploader
-    .upload(tempFilePath, {
-      public_id: url,
-      format: "png",
-      folder: "test",
-      overwrite: true,
-    })
-    .catch((error) => {
-      console.error("Error uploading to Cloudinary:", error);
+  try {
+    const image = await sharp(Buffer.from(svg)).png();
+    const randomId = Math.random().toString(36).substring(2, 15);
+    const media = await put(randomId + ".png", image, {
+      access: "public",
+      addRandomSuffix: false,
     });
 
-  // Return response immediately with expected URL
-  const twiml = new twilio.twiml.MessagingResponse();
-  const message = twiml.message(text);
-  message.media(expectedUrl);
-  console.log(twiml.toString());
-  return twiml.toString();
+    const twiml = new twilio.twiml.MessagingResponse();
+    const message = twiml.message(text);
+    message.media(media.url);
+    console.log(media.url);
+    return twiml.toString();
+  } catch (error) {
+    console.error("Error generating image:", error);
+    // Fallback to text-only response if image generation fails
+    const twiml = new twilio.twiml.MessagingResponse();
+    twiml.message(text);
+    return twiml.toString();
+  }
 };
 
 /**
@@ -90,7 +88,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Only allow POST requests
+  Only allow POST requests
   if (req.method !== "POST") {
     res.setHeader("Allow", ["POST"]);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
@@ -111,8 +109,6 @@ export default async function handler(
       console.error("Missing required fields:", { incomingMsg, from });
       return res.status(400).end("Missing required fields");
     }
-
-    console.log("Received message:", incomingMsg, "from:", from);
 
     // Parse command and arguments
     const [command, ...args] = incomingMsg.split(" ");
