@@ -47,8 +47,8 @@ const formatTwilioResponse = async (text: string) => {
 
   // Updated SVG with Google Fonts and simplified styling
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">
-    <rect width="100%" height="100%" fill="#1a1a1a" />
-    <text x="20" y="40" fill="white" font-family="system-ui, -apple-system, sans-serif" font-size="20">
+    <rect width="100%" height="100%" fill="white" />
+    <text x="20" y="40" fill="black" font-family="system-ui, -apple-system, sans-serif" font-size="20">
       <tspan x="20" dy="0">${escapedText}</tspan>
     </text>
   </svg>`;
