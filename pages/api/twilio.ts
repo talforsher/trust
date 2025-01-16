@@ -43,7 +43,7 @@ const formatTwilioResponse = async (text: string) => {
     const twiml = new twilio.twiml.MessagingResponse();
     const message = twiml.message(text);
     message.media(
-      "https://res.cloudinary.com/efsi/image/upload/v1734607400/ftjuhyuqz1gnybipag50.png"
+      "https://res.cloudinary.com/demo/image/upload/$award_!First!/$color_!rgb:FFFFFF!/$style_!Arial_150!/b_gray,co_$color,l_text:$style:  $(award)  Place ,r_10,o_76,g_south,y_10/docs/green-race-car.jpg"
     );
     console.log(twiml.toString());
     return twiml.toString();
