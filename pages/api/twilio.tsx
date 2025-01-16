@@ -68,6 +68,7 @@ const formatTwilioResponse = async (text: string, image?: string) => {
   const twiml = new twilio.twiml.MessagingResponse();
   const message = twiml.message(text);
   message.media(expectedUrl);
+  console.log(twiml.toString());
   return twiml.toString();
 };
 
