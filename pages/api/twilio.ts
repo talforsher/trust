@@ -3,7 +3,7 @@ import twilio from "twilio";
 import { NextApiRequest, NextApiResponse } from "next";
 import { handleGameCommand, GameError } from "../../lib/game";
 import { put } from "@vercel/blob";
-import sharp from "sharp";
+import { Resvg } from "@resvg/resvg-js";
 
 /**
  * Validates that the request is coming from Twilio
@@ -64,16 +64,12 @@ const formatTwilioResponse = async (text: string) => {
 `;
 
   try {
-    // Add format configuration to sharp to ensure consistent output
-    const image = sharp(Buffer.from(svg))
-      .png({ compressionLevel: 9 })
-      .on("error", (err) => {
-        console.error("Sharp processing error:", err);
-        throw err;
-      });
+    const resvg = new Resvg(svg);
+    const pngData = resvg.render();
+    const pngBuffer = pngData.asPng();
 
     const randomId = Math.random().toString(36).substring(2, 15);
-    const media = await put(randomId + ".png", image, {
+    const media = await put(randomId + ".png", pngBuffer, {
       access: "public",
       addRandomSuffix: false,
     });
