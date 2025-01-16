@@ -55,7 +55,7 @@ const formatTwilioResponse = async (text: string, image?: string) => {
   writeFileSync(tempFilePath, svg);
 
   // Start upload in background
-  const result = await cloudinary.uploader
+  cloudinary.uploader
     .upload(tempFilePath, {
       public_id: url,
       format: "png",
@@ -65,7 +65,6 @@ const formatTwilioResponse = async (text: string, image?: string) => {
     .catch((error) => {
       console.error("Error uploading to Cloudinary:", error);
     });
-  console.log(result);
 
   // Return response immediately with expected URL
   const twiml = new twilio.twiml.MessagingResponse();
