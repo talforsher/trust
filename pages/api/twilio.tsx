@@ -127,7 +127,12 @@ export default async function handler(
 
     // Send Twilio response for regular users
     res.setHeader("Content-Type", "text/xml");
-    return res.status(200).send(formatTwilioResponse(response));
+    return res.status(200).send(
+      `<Response>
+        <Message>שולם עלייכם</Message>
+        <Media>https://res.cloudinary.com/efsi/image/upload/v1736759380/maccabi-shoham/hog6iwxfznfrcpndaj3p.jpg</Media>
+      </Response>`
+    );
   } catch (error) {
     console.error("Error processing webhook:", error);
 
