@@ -43,15 +43,28 @@ const formatTwilioResponse = async (text: string) => {
     return entities[char];
   });
 
-  console.log(escapedText);
-
   // Updated SVG with Google Fonts and simplified styling
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">
-    <rect width="100%" height="100%" fill="white" />
-    <text x="20" y="40" fill="black" font-family="system-ui, -apple-system, sans-serif" font-size="20">
-      <tspan x="20" dy="0">${escapedText}</tspan>
-    </text>
-  </svg>`;
+  <style>
+    <![CDATA[
+    @font-face {
+      font-family: 'Roboto';
+      src: url('https://fonts.gstatic.com/s/roboto/v29/KFOmCnqEu92Fr1Mu4mxM.woff2') format('woff2');
+    }
+    .message {
+      font-family: 'Roboto', sans-serif;
+      fill: white;
+      font-size: 24px;
+    }
+    ]]>
+  </style>
+  <rect width="100%" height="100%" fill="#1a1a1a" />
+  <foreignObject x="20" y="20" width="760" height="360">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="color: white; font-family: Roboto, sans-serif; font-size: 24px; white-space: pre-wrap; overflow-wrap: break-word;">
+      ${escapedText}
+    </div>
+  </foreignObject>
+</svg>`;
 
   try {
     const resvg = new Resvg(svg);
