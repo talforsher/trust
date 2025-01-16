@@ -51,17 +51,20 @@ const formatTwilioResponse = async (text: string) => {
       font-family: 'Roboto';
       src: url('https://fonts.gstatic.com/s/roboto/v29/KFOmCnqEu92Fr1Mu4mxM.woff2') format('woff2');
     }
-    text {
+    .message {
       font-family: 'Roboto', sans-serif;
       fill: white;
-      font-size: 20px;
+      font-size: 24px;
     }
     ]]>
   </style>
   <rect width="100%" height="100%" fill="#1a1a1a" />
-  <text x="20" y="40">Hello, World!</text>
-</svg>
-`;
+  <foreignObject x="20" y="20" width="760" height="360">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="color: white; font-family: Roboto, sans-serif; font-size: 24px; white-space: pre-wrap; overflow-wrap: break-word;">
+      ${escapedText}
+    </div>
+  </foreignObject>
+</svg>`;
 
   try {
     const resvg = new Resvg(svg);
