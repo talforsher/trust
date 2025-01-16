@@ -36,7 +36,7 @@ const formatTwilioResponse = async (text: string) => {
     const message = twiml.message(text);
     const encodedText = encodeURIComponent(text);
 
-    const fontSize = Math.max(30, 150 - text.length * 2);
+    const fontSize = Math.max(40, 170 - text.length);
 
     message.media(
       `https://res.cloudinary.com/efsi/image/upload/b_gray,co_rgb:FFFFFF,l_text:Arial_${fontSize}:${encodedText},r_10,o_76,g_south,y_40/xrjx758eqm8zb9ctuet1.jpg`
