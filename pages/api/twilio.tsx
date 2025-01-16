@@ -36,11 +36,11 @@ const formatTwilioResponse = (text: string, image?: string) => {
     api_secret: process.env.CLOUDINARY_API_SECRET,
   });
   const cloudinaryUrl = "https://res.cloudinary.com/efsi/image/upload/";
-  const id = Math.random().toString(36).substring(2, 15);
-  const imageUrl = `${cloudinaryUrl}/${id}.png`;
+  const url = Math.random().toString(36).substring(2, 15);
+  const imageUrl = `${cloudinaryUrl}/${url}.svg`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="50" y="50" font-family="Arial, sans-serif" font-size="24" fill="white">${text}</text></svg>`;
-  cloudinary.uploader.upload(`data:image/svg+xml,${svg}`, {
-    public_id: id,
+  cloudinary.uploader.upload(svg, {
+    public_id: url,
     width: 100,
     height: 100,
     format: "png",
