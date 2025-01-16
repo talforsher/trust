@@ -25,20 +25,6 @@ const validateTwilioRequest = (req: NextApiRequest): boolean => {
   );
 };
 
-const textWrap = (text: string) => {
-  // after 100, if we are in the end of a word, wrap it
-  const words = text.split(" ");
-  let wrappedText = "";
-  for (const word of words) {
-    if (wrappedText.length + word.length > 100) {
-      wrappedText += "\n" + word;
-    } else {
-      wrappedText += " " + word;
-    }
-  }
-  return wrappedText;
-};
-
 /**
  * Formats the response for Twilio
  */
@@ -47,7 +33,7 @@ const formatTwilioResponse = async (text: string) => {
 
   try {
     const twiml = new twilio.twiml.MessagingResponse();
-    const message = twiml.message(textWrap(text));
+    const message = twiml.message(text);
     const encodedText = encodeURIComponent(text);
 
     const fontSize = Math.max(40, 170 - text.length);
