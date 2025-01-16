@@ -1,7 +1,8 @@
 // twilio webhook
-import twilio from "twilio";
+import twilio, { twiml } from "twilio";
 import { NextApiRequest, NextApiResponse } from "next";
 import { handleGameCommand, GameError } from "../../lib/game";
+import { v2 as cloudinary } from "cloudinary";
 
 /**
  * Validates that the request is coming from Twilio
@@ -28,14 +29,22 @@ const validateTwilioRequest = (req: NextApiRequest): boolean => {
 /**
  * Formats the response for Twilio
  */
-const formatTwilioResponse = (text: string) => {
+const formatTwilioResponse = (text: string, image?: string) => {
+  const cloudinaryUrl = "https://res.cloudinary.com/efsi/image/upload/";
+  const url = Math.random().toString(36).substring(2, 15);
+  const imageUrl = `${cloudinaryUrl}/${url}.svg`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="50" y="50" font-family="Arial, sans-serif" font-size="24" fill="white">${text}</text></svg>`;
+  cloudinary.uploader.upload(svg, {
+    public_id: url,
+    width: 100,
+    height: 100,
+  });
+
   const twiml = new twilio.twiml.MessagingResponse();
-  const message = twiml.message("");
-  message.body(text);
-  message.media(
-    "https://res.cloudinary.com/efsi/image/upload/v1736759380/maccabi-shoham/hog6iwxfznfrcpndaj3p.jpg"
-  );
-  console.log("the twiml", twiml.toString());
+  const message = twiml.message(text);
+  // if (image) {
+  message.media(imageUrl);
+  // }
   return twiml.toString();
 };
 
