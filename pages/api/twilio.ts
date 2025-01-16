@@ -40,15 +40,11 @@ const formatTwilioResponse = async (text: string) => {
 
   try {
     // Generate image using Cloudinary's text overlay
-    const cloudinaryResult = await cloudinary.uploader.text(text, {
-      font_family: "Arial",
-      font_size: 40,
-      font_weight: "bold",
-    });
+    const cloudinaryResult = await cloudinary.uploader.text(text);
 
     const twiml = new twilio.twiml.MessagingResponse();
     const message = twiml.message(text);
-    // message.media(cloudinaryResult.url);
+    message.media(cloudinaryResult.url);
     console.log(twiml.toString());
     return twiml.toString();
   } catch (error) {
