@@ -2,7 +2,6 @@
 import twilio from "twilio";
 import { NextApiRequest, NextApiResponse } from "next";
 import { handleGameCommand, GameError } from "../../lib/game";
-import { v2 as cloudinary } from "cloudinary";
 
 /**
  * Validates that the request is coming from Twilio
@@ -31,19 +30,13 @@ const validateTwilioRequest = (req: NextApiRequest): boolean => {
  */
 const formatTwilioResponse = async (text: string) => {
   // Configure Cloudinary
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
 
   try {
-    const cloudinaryResult = await cloudinary.uploader.text(text);
-
     const twiml = new twilio.twiml.MessagingResponse();
     const message = twiml.message(text);
+    const decodedText = decodeURIComponent(text);
     message.media(
-      "https://res.cloudinary.com/efsi/image/upload/b_gray,co_rgb:FFFFFF,l_text:Arial_100:%20%20First%20%20Place%20,r_10,o_76,g_south,y_40/xrjx758eqm8zb9ctuet1.jpg"
+      `https://res.cloudinary.com/efsi/image/upload/b_gray,co_rgb:FFFFFF,l_text:Arial_100:${decodedText},r_10,o_76,g_south,y_40/xrjx758eqm8zb9ctuet1.jpg`
     );
     console.log(twiml.toString());
     return twiml.toString();
