@@ -88,7 +88,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  Only allow POST requests
+  // Only allow POST requests
   if (req.method !== "POST") {
     res.setHeader("Allow", ["POST"]);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
