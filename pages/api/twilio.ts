@@ -2,6 +2,7 @@
 import twilio from "twilio";
 import { NextApiRequest, NextApiResponse } from "next";
 import { handleGameCommand, GameError } from "../../lib/game";
+import fs from "fs";
 
 /**
  * Validates that the request is coming from Twilio
@@ -59,19 +60,34 @@ const isAdminRequest = (from: string): boolean => {
   return from === "web-client";
 };
 
+// Add this interface before the handler function
+interface TwilioWhatsAppWebhookBody {
+  Body?: string; // The message content
+  From: string; // The WhatsApp number in format 'whatsapp:+1234567890'
+  To: string; // The Twilio WhatsApp number
+  SmsMessageSid: string; // Unique identifier for the message
+  NumMedia?: string; // Number of media attachments
+  ProfileName?: string; // WhatsApp profile name of the sender
+  SmsSid: string; // Same as SmsMessageSid
+  WaId: string; // WhatsApp ID of the sender
+  SmsStatus: string; // Status of the message
+  AccountSid: string; // Your Twilio account SID
+}
+
 /**
  * Twilio webhook handler
  * @description Handles incoming WhatsApp messages through Twilio
  */
 export default async function handler(
-  req: NextApiRequest,
+  remoteReq: NextApiRequest & { body: TwilioWhatsAppWebhookBody },
   res: NextApiResponse
 ) {
-  // Only allow POST requests
-  if (req.method !== "POST") {
-    res.setHeader("Allow", ["POST"]);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
-  }
+  const req = remoteReq;
+
+  req.body =
+    process.env.NODE_ENV === "development"
+      ? JSON.parse(fs.readFileSync("mock/whatsapp.json", "utf8"))
+      : remoteReq;
 
   try {
     // Validate Twilio request
