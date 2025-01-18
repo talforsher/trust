@@ -6,8 +6,16 @@ import { CommandFactory } from "../../lib/commands/CommandFactory";
 import { StatusCommand } from "../../lib/commands/StatusCommand";
 import { RegisterCommand } from "../../lib/commands/RegisterCommand";
 import { HelpCommand } from "../../lib/commands/HelpCommand";
+import { CreateCommand } from "../../lib/commands/CreateCommand";
+import { JoinCommand } from "../../lib/commands/JoinCommand";
+import { AttackCommand } from "../../lib/commands/AttackCommand";
+import { DefendCommand } from "../../lib/commands/DefendCommand";
+import { CollectCommand } from "../../lib/commands/CollectCommand";
+import { AllianceCommand } from "../../lib/commands/AllianceCommand";
+import { ListPlayersCommand } from "../../lib/commands/ListPlayersCommand";
+import { LeaveCommand } from "../../lib/commands/LeaveCommand";
+import { ConfigCommand } from "../../lib/commands/ConfigCommand";
 import { COMMANDS } from "../../lib/commands/CommandTypes";
-import fs from "fs";
 
 /**
  * Validates that the request is coming from Twilio
@@ -35,8 +43,6 @@ const validateTwilioRequest = (req: NextApiRequest): boolean => {
  * Formats the response for Twilio
  */
 const formatTwilioResponse = async (text: string) => {
-  // Configure Cloudinary
-
   try {
     const twiml = new twilio.twiml.MessagingResponse();
     const message = twiml.message(text);
@@ -56,13 +62,6 @@ const formatTwilioResponse = async (text: string) => {
     twiml.message(text);
     return twiml.toString();
   }
-};
-
-/**
- * Checks if the request is from an admin
- */
-const isAdminRequest = (from: string): boolean => {
-  return from === "web-client";
 };
 
 // Add this interface before the handler function
@@ -111,20 +110,24 @@ export default async function handler(
 
     // Initialize command factory and register commands
     const factory = CommandFactory.getInstance();
-    factory.registerCommand(COMMANDS.STATUS, StatusCommand);
-    factory.registerCommand(COMMANDS.REGISTER, RegisterCommand);
     factory.registerCommand(COMMANDS.HELP, HelpCommand);
+    factory.registerCommand(COMMANDS.REGISTER, RegisterCommand);
+    factory.registerCommand(COMMANDS.CREATE, CreateCommand);
+    factory.registerCommand(COMMANDS.JOIN, JoinCommand);
+    factory.registerCommand(COMMANDS.ATTACK, AttackCommand);
+    factory.registerCommand(COMMANDS.DEFEND, DefendCommand);
+    factory.registerCommand(COMMANDS.COLLECT, CollectCommand);
+    factory.registerCommand(COMMANDS.ALLIANCE, AllianceCommand);
+    factory.registerCommand(COMMANDS.STATUS, StatusCommand);
+    factory.registerCommand(COMMANDS.LIST_PLAYERS, ListPlayersCommand);
+    factory.registerCommand(COMMANDS.LEAVE, LeaveCommand);
+    factory.registerCommand(COMMANDS.CONFIG, ConfigCommand);
 
     // If no command or help command, show help
     const normalizedCommand = command.toLowerCase();
     if (!normalizedCommand || normalizedCommand === COMMANDS.HELP) {
       const helpCommand = new HelpCommand();
       const response = await helpCommand.execute(from, args);
-
-      if (isAdminRequest(from)) {
-        return res.status(200).send(response); // Help command returns JSON for web client
-      }
-
       res.setHeader("Content-Type", "text/xml");
       const formattedResponse = await formatTwilioResponse(response);
       return res.status(200).send(formattedResponse);
@@ -137,12 +140,7 @@ export default async function handler(
       args
     );
 
-    // Send response based on request type
-    if (isAdminRequest(from)) {
-      return res.status(200).json({ success: true, message: response });
-    }
-
-    // Send Twilio response for regular users
+    // Send Twilio response
     res.setHeader("Content-Type", "text/xml");
     const formattedResponse = await formatTwilioResponse(response);
     return res.status(200).send(formattedResponse);
@@ -150,24 +148,12 @@ export default async function handler(
     console.error("Error processing webhook:", error);
 
     if (error instanceof GameError) {
-      if (isAdminRequest(req.body.From)) {
-        return res.status(200).json({
-          success: false,
-          error: error.message,
-        });
-      }
       res.setHeader("Content-Type", "text/xml");
       return res
         .status(200)
         .send(formatTwilioResponse(`Error: ${error.message}`));
     }
 
-    if (isAdminRequest(req.body.From)) {
-      return res.status(500).json({
-        success: false,
-        error: "Internal Server Error",
-      });
-    }
     return res.status(500).end("Internal Server Error");
   }
 }
