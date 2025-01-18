@@ -1,7 +1,7 @@
 import axios from "axios";
 import twilio from "twilio";
 import { NextApiRequest, NextApiResponse } from "next";
-import { TwilioWhatsAppWebhookBody } from "./twilio";
+import { TwilioWhatsAppWebhookBody } from "@/types";
 
 export default async function handler(
   req: NextApiRequest & { body: TwilioWhatsAppWebhookBody },

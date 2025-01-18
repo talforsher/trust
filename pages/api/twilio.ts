@@ -16,6 +16,7 @@ import { ListPlayersCommand } from "../../lib/commands/ListPlayersCommand";
 import { LeaveCommand } from "../../lib/commands/LeaveCommand";
 import { ConfigCommand } from "../../lib/commands/ConfigCommand";
 import { COMMANDS } from "../../lib/commands/CommandTypes";
+import { TwilioWhatsAppWebhookBody } from "@/types";
 
 /**
  * Validates that the request is coming from Twilio
@@ -69,20 +70,6 @@ const formatTwilioResponse = async (
     return twiml.toString();
   }
 };
-
-// Add this interface before the handler function
-interface TwilioWhatsAppWebhookBody {
-  Body?: string; // The message content
-  From: string; // The WhatsApp number in format 'whatsapp:+1234567890'
-  To: string; // The Twilio WhatsApp number
-  SmsMessageSid: string; // Unique identifier for the message
-  NumMedia?: string; // Number of media attachments
-  ProfileName?: string; // WhatsApp profile name of the sender
-  SmsSid: string; // Same as SmsMessageSid
-  WaId: string; // WhatsApp ID of the sender
-  SmsStatus: string; // Status of the message
-  AccountSid: string; // Your Twilio account SID
-}
 
 /**
  * Twilio webhook handler
