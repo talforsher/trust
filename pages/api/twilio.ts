@@ -1,7 +1,12 @@
 // twilio webhook
 import twilio from "twilio";
 import { NextApiRequest, NextApiResponse } from "next";
-import { handleGameCommand, GameError } from "../../lib/game";
+import { GameError } from "../../lib/game";
+import { CommandFactory } from "../../lib/commands/CommandFactory";
+import { StatusCommand } from "../../lib/commands/StatusCommand";
+import { RegisterCommand } from "../../lib/commands/RegisterCommand";
+import { HelpCommand } from "../../lib/commands/HelpCommand";
+import { COMMANDS } from "../../lib/commands/CommandTypes";
 import fs from "fs";
 
 /**
@@ -104,54 +109,42 @@ export default async function handler(
     // Parse command and arguments
     const [command, ...args] = incomingMsg.split(" ");
 
-    // Handle the game command
-    const response = handleGameCommand(from, command, args);
+    // Initialize command factory and register commands
+    const factory = CommandFactory.getInstance();
+    factory.registerCommand(COMMANDS.STATUS, StatusCommand);
+    factory.registerCommand(COMMANDS.REGISTER, RegisterCommand);
+    factory.registerCommand(COMMANDS.HELP, HelpCommand);
+
+    // If no command or help command, show help
+    const normalizedCommand = command.toLowerCase();
+    if (!normalizedCommand || normalizedCommand === COMMANDS.HELP) {
+      const helpCommand = new HelpCommand();
+      const response = await helpCommand.execute(from, args);
+
+      if (isAdminRequest(from)) {
+        return res.status(200).send(response); // Help command returns JSON for web client
+      }
+
+      res.setHeader("Content-Type", "text/xml");
+      const formattedResponse = await formatTwilioResponse(response);
+      return res.status(200).send(formattedResponse);
+    }
+
+    // Handle other commands
+    const response = await factory.executeCommand(
+      from,
+      normalizedCommand,
+      args
+    );
 
     // Send response based on request type
     if (isAdminRequest(from)) {
-      // If it's a help message, structure it for the UI
-      if (command.toLowerCase() === "help" || !command) {
-        const commands = {
-          regular: [
-            { name: "register <name>", description: "Set your player name" },
-            { name: "join <game_id>", description: "Join a game" },
-            { name: "attack <player>", description: "Attack another player" },
-            { name: "defend", description: "Boost your defense" },
-            { name: "collect", description: "Gather resources" },
-            { name: "alliance <player>", description: "Propose alliance" },
-            { name: "status", description: "Check your status" },
-            { name: "players", description: "List all players" },
-            { name: "leave", description: "Leave current game" },
-          ],
-          admin: [
-            {
-              name: "create_game <game_id> <duration_hours> <max_players>",
-              description: "Create a new game",
-            },
-            { name: "delete <player>", description: "Delete a player" },
-            {
-              name: "give <player> <amount>",
-              description: "Give resources to a player",
-            },
-            {
-              name: "setlevel <player> <level>",
-              description: "Set a player's level",
-            },
-          ],
-        };
-        return res.status(200).json({
-          success: true,
-          isHelp: true,
-          commands,
-        });
-      }
       return res.status(200).json({ success: true, message: response });
     }
 
     // Send Twilio response for regular users
     res.setHeader("Content-Type", "text/xml");
-    const responseText = await response;
-    const formattedResponse = await formatTwilioResponse(responseText);
+    const formattedResponse = await formatTwilioResponse(response);
     return res.status(200).send(formattedResponse);
   } catch (error) {
     console.error("Error processing webhook:", error);
