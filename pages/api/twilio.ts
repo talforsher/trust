@@ -84,11 +84,6 @@ export default async function handler(
 ) {
   const req = remoteReq;
 
-  req.body =
-    process.env.NODE_ENV === "development"
-      ? JSON.parse(fs.readFileSync("mock/whatsapp.json", "utf8"))
-      : remoteReq;
-
   try {
     // Validate Twilio request
     // if (!validateTwilioRequest(req)) {
