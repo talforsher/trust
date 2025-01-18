@@ -42,7 +42,10 @@ const validateTwilioRequest = (req: NextApiRequest): boolean => {
 /**
  * Formats the response for Twilio
  */
-const formatTwilioResponse = async (text: string) => {
+const formatTwilioResponse = async (
+  text: string,
+  isSendMedia: boolean = false
+) => {
   try {
     const twiml = new twilio.twiml.MessagingResponse();
     const message = twiml.message(text);
@@ -50,9 +53,12 @@ const formatTwilioResponse = async (text: string) => {
 
     const fontSize = Math.max(40, 170 - text.length);
 
-    message.media(
-      `https://res.cloudinary.com/efsi/image/upload/b_gray,co_rgb:FFFFFF,l_text:Arial_${fontSize}:${encodedText},r_10,o_76,g_south,y_40/xrjx758eqm8zb9ctuet1.jpg`
-    );
+    if (isSendMedia) {
+      message.media(
+        `https://res.cloudinary.com/efsi/image/upload/b_gray,co_rgb:FFFFFF,l_text:Arial_${fontSize}:${encodedText},r_10,o_76,g_south,y_40/xrjx758eqm8zb9ctuet1.jpg`
+      );
+    }
+
     console.log(twiml.toString());
     return twiml.toString();
   } catch (error) {
@@ -129,7 +135,7 @@ export default async function handler(
       const helpCommand = new HelpCommand();
       const response = await helpCommand.execute(from, args);
       res.setHeader("Content-Type", "text/xml");
-      const formattedResponse = await formatTwilioResponse(response);
+      const formattedResponse = await formatTwilioResponse(response, true);
       return res.status(200).send(formattedResponse);
     }
 
