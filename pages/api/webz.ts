@@ -8,12 +8,11 @@ export default async function handler(
   res: NextApiResponse
 ) {
   try {
-    // Validate request method
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const domain = req.body.Body?.trim();
+    const domain = req.body.Body?.toLowerCase().trim();
     if (!domain) {
       const twiml = new twilio.twiml.MessagingResponse();
       twiml.message("Please provide a valid domain name");
