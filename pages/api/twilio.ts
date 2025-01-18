@@ -51,11 +51,11 @@ const formatTwilioResponse = async (
     const message = twiml.message(text);
     const encodedText = encodeURIComponent(text);
 
-    const fontSize = Math.max(40, 170 - text.length);
+    const fontSize = Math.max(40, 150 - text.length);
 
     if (isSendMedia) {
       message.media(
-        `https://res.cloudinary.com/efsi/image/upload/b_gray,co_rgb:FFFFFF,l_text:Arial_${fontSize}:${encodedText},r_10,o_76,g_south,y_40/xrjx758eqm8zb9ctuet1.jpg`
+        `https://res.cloudinary.com/efsi/image/upload/co_rgb:000000,l_text:Arial_${fontSize}:${encodedText},r_10,o_76,g_south,y_100/xrjx758eqm8zb9ctuet1.jpg`
       );
     }
 
