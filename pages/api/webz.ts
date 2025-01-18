@@ -118,9 +118,8 @@ ${companyTotals
   .join("\n")}`;
 
     const twiml = new twilio.twiml.MessagingResponse();
-    twiml.message(message);
-    twiml.media("https://logo.clearbit.com/" + domain);
-
+    const twimlMessage = twiml.message(message);
+    twimlMessage.media("https://logo.clearbit.com/" + domain);
     res.setHeader("Content-Type", "text/xml");
     return res.status(200).send(twiml.toString());
   } catch (error) {
