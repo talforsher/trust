@@ -8,6 +8,7 @@ export default async function handler(
   res: NextApiResponse
 ) {
   try {
+    // Validate request method
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Method not allowed" });
     }
@@ -118,8 +119,8 @@ ${companyTotals
   .join("\n")}`;
 
     const twiml = new twilio.twiml.MessagingResponse();
-    const twimlMessage = twiml.message(message);
-    twimlMessage.media("https://logo.clearbit.com/" + domain);
+    twiml.message(message);
+
     res.setHeader("Content-Type", "text/xml");
     return res.status(200).send(twiml.toString());
   } catch (error) {
