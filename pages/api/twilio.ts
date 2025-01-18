@@ -55,7 +55,7 @@ const formatTwilioResponse = async (
 
     if (isSendMedia) {
       message.media(
-        `https://res.cloudinary.com/efsi/image/upload/co_rgb:000000,l_text:Arial_${fontSize}:${encodedText},r_10,o_76,g_south,y_100/xrjx758eqm8zb9ctuet1.jpg`
+        `https://res.cloudinary.com/efsi/image/upload/co_rgb:000000,l_text:Arial_${fontSize}:${encodedText},r_10,o_76,g_south,y_500/xrjx758eqm8zb9ctuet1.jpg`
       );
     }
 
