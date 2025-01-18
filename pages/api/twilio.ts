@@ -48,7 +48,7 @@ const formatTwilioResponse = async (
 ) => {
   try {
     const twiml = new twilio.twiml.MessagingResponse();
-    const message = twiml.message(text);
+    const message = twiml.message(isSendMedia ? "" : text);
     const encodedText = encodeURIComponent(text);
 
     const fontSize = Math.max(40, 150 - text.length);
