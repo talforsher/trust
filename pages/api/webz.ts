@@ -46,6 +46,41 @@ export default async function handler(
     const companyTotals = companyReport.totals;
     const companyCompromisedFields = companyReport.compromisedFields;
 
+    // Define interface for totals
+    interface Total {
+      interval: string;
+      label: string;
+      total: number;
+      totalStealers?: number;
+      totalLeaks?: number;
+    }
+
+    // Function to format ISO duration string to readable format
+    const formatDuration = (duration: string) => {
+      if (!duration) return "N/A";
+      const matches = duration.match(
+        /P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)(?:\.\d+)?S)?/
+      );
+      if (!matches) return duration;
+
+      const [_, years, months, days, hours, minutes, seconds] = matches;
+      const parts = [];
+
+      if (years) parts.push(`${years} year${years !== "1" ? "s" : ""}`);
+      if (months) parts.push(`${months} month${months !== "1" ? "s" : ""}`);
+      if (days) parts.push(`${days} day${days !== "1" ? "s" : ""}`);
+      if (hours) parts.push(`${hours} hour${hours !== "1" ? "s" : ""}`);
+      if (minutes) parts.push(`${minutes} minute${minutes !== "1" ? "s" : ""}`);
+      if (seconds)
+        parts.push(
+          `${Math.floor(Number(seconds))} second${
+            Math.floor(Number(seconds)) !== 1 ? "s" : ""
+          }`
+        );
+
+      return parts.join(", ") || "just now";
+    };
+
     const message = `*Domain Report for ${domain}*
 
 📊 *Customer Report*
@@ -53,7 +88,7 @@ export default async function handler(
 • Last Exposure: ${
       lastExposureDate ? new Date(lastExposureDate).toLocaleDateString() : "N/A"
     }
-• Time Since Exposure: ${timeFromLastExposure || "N/A"}
+• Time Since Exposure: ${formatDuration(timeFromLastExposure)}
 • Recent Info Stealers: ${
       mostRecentInfoStealers?.length
         ? mostRecentInfoStealers.join(", ")
@@ -63,6 +98,11 @@ export default async function handler(
 • Cookies Stolen: ${stolenCookies ? "Yes ⚠️" : "No ✅"}
 • Location: ${mostRecentLocation || "Unknown"}
 
+📈 *Customer Totals*
+${totals
+  .map((t: Total) => `• ${t.label}: ${t.total} leak${t.total !== 1 ? "s" : ""}`)
+  .join("\n")}
+
 🏢 *Company Report*
 • Risk Score: ${companyRiskScore}/5
 • Total Leaks: ${companyLeakCount || 0}
@@ -71,7 +111,12 @@ export default async function handler(
       companyMostRecentInfoStealers?.length
         ? companyMostRecentInfoStealers.join(", ")
         : "None"
-    }`;
+    }
+
+📊 *Company Totals*
+${companyTotals
+  .map((t: Total) => `• ${t.label}: ${t.total} leak${t.total !== 1 ? "s" : ""}`)
+  .join("\n")}`;
 
     const twiml = new twilio.twiml.MessagingResponse();
     twiml.message(message);
