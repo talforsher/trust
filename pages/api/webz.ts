@@ -3,6 +3,10 @@ import twilio from "twilio";
 import { NextApiRequest, NextApiResponse } from "next";
 import { TwilioWhatsAppWebhookBody } from "@/types";
 
+const parseThousands = (number: number) => {
+  return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
+
 export default async function handler(
   req: NextApiRequest & { body: TwilioWhatsAppWebhookBody },
   res: NextApiResponse
@@ -66,12 +70,17 @@ export default async function handler(
       const [_, years, months, days, hours, minutes, seconds] = matches;
       const parts = [];
 
-      if (years) parts.push(`${years} year${years !== "1" ? "s" : ""}`);
-      if (months) parts.push(`${months} month${months !== "1" ? "s" : ""}`);
-      if (days) parts.push(`${days} day${days !== "1" ? "s" : ""}`);
-      if (hours) parts.push(`${hours} hour${hours !== "1" ? "s" : ""}`);
-      if (minutes) parts.push(`${minutes} minute${minutes !== "1" ? "s" : ""}`);
-      if (seconds)
+      if (Number(years) > 0)
+        parts.push(`${years} year${Number(years) !== 1 ? "s" : ""}`);
+      if (Number(months) > 0)
+        parts.push(`${months} month${Number(months) !== 1 ? "s" : ""}`);
+      if (Number(days) > 0)
+        parts.push(`${days} day${Number(days) !== 1 ? "s" : ""}`);
+      if (Number(hours) > 0)
+        parts.push(`${hours} hour${Number(hours) !== 1 ? "s" : ""}`);
+      if (Number(minutes) > 0)
+        parts.push(`${minutes} minute${Number(minutes) !== 1 ? "s" : ""}`);
+      if (Number(seconds) > 0)
         parts.push(
           `${Math.floor(Number(seconds))} second${
             Math.floor(Number(seconds)) !== 1 ? "s" : ""
@@ -94,18 +103,21 @@ export default async function handler(
         ? mostRecentInfoStealers.join(", ")
         : "None"
     }
-• Total Leaks: ${leakCount || 0}
+• Total Leaks: ${parseThousands(leakCount || 0)}
 • Cookies Stolen: ${stolenCookies ? "Yes ⚠️" : "No ✅"}
 • Location: ${mostRecentLocation || "Unknown"}
 
 📈 *Customer Totals*
 ${totals
-  .map((t: Total) => `• ${t.label}: ${t.total} leak${t.total !== 1 ? "s" : ""}`)
+  .map(
+    (t: Total) =>
+      `• ${t.label}: ${parseThousands(t.total)} leak${t.total !== 1 ? "s" : ""}`
+  )
   .join("\n")}
 
 🏢 *Company Report*
 • Risk Score: ${companyRiskScore}/5
-• Total Leaks: ${companyLeakCount || 0}
+• Total Leaks: ${parseThousands(companyLeakCount || 0)}
 • Cookies Stolen: ${companyStolenCookies ? "Yes ⚠️" : "No ✅"}
 • Recent Info Stealers: ${
       companyMostRecentInfoStealers?.length
@@ -115,7 +127,10 @@ ${totals
 
 📊 *Company Totals*
 ${companyTotals
-  .map((t: Total) => `• ${t.label}: ${t.total} leak${t.total !== 1 ? "s" : ""}`)
+  .map(
+    (t: Total) =>
+      `• ${t.label}: ${parseThousands(t.total)} leak${t.total !== 1 ? "s" : ""}`
+  )
   .join("\n")}`;
 
     const twiml = new twilio.twiml.MessagingResponse();
